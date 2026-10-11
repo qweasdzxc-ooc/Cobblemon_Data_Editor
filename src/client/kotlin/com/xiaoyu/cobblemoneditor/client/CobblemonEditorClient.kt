@@ -8,9 +8,10 @@ import net.minecraft.client.KeyMapping
 import org.lwjgl.glfw.GLFW
 import org.slf4j.LoggerFactory
 
-object CobblemonEditorClient : ClientModInitializer {
-	private val log = LoggerFactory.getLogger("cobblemoneditor-client")
-
+/**
+ * 客户端入口。同样必须是 class（见 CobblemonEditor 的说明）。
+ */
+class CobblemonEditorClient : ClientModInitializer {
 	override fun onInitializeClient() {
 		log.info("[cobblemoneditor] client init")
 		val openKey = KeyBindingHelper.registerKeyBinding(
@@ -21,5 +22,9 @@ object CobblemonEditorClient : ClientModInitializer {
 				client.setScreen(EditorScreen())
 			}
 		}
+	}
+
+	companion object {
+		private val log = LoggerFactory.getLogger("cobblemoneditor-client")
 	}
 }
