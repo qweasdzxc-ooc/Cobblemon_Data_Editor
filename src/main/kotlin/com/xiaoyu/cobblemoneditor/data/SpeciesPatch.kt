@@ -1,27 +1,20 @@
 package com.xiaoyu.cobblemoneditor.data
 
 /**
- * 种族值补丁。null = 不改该项。
- * 输出为 Cobblemon 的 species_additions JSON 补丁（不覆写整个 species 文件）。
+ * 编辑规格解析 + species_additions JSON 生成。
+ *
+ * 规格串：逗号分隔的 key=value 列表，例如：
+ *   speed=120,hp=40,primaryType=electric,secondaryType=flying,abilities=static|h:lightningrod
+ * - 种族值键：hp/attack/defence/special_attack/special_defence/speed（0..255）
+ * - 属性键：primaryType（别名 type1）、secondaryType（别名 type2）；值用类型 id（小写），
+ *           "none"/"null"/"" 表示该属性为空（无第二属性）
+ * - 特性键：abilities；值用 | 分隔的列表，例如 static|h:lightningrod（h: 前缀=隐藏特性）
  */
-data class StatPatch(
-    val hp: Int? = null,
-    val attack: Int? = null,
-    val defence: Int? = null,
-    val specialAttack: Int? = null,
-    val specialDefence: Int? = null,
-    val speed: Int? = null,
-) {
-    val isEmpty: Boolean
-        get() = listOfNotNull(hp, attack, defence, specialAttack, specialDefence, speed).isEmpty()
-}
-
 object SpeciesPatch {
     const val MIN = 0
     const val MAX = 255
 
-    /** 输入别名 -> JSON key（与 Cobblemon species JSON 的 baseStats 键一致） */
-    private val ALIASES = mapOf(
+    private val STAT_ALIASES = mapOf(
         "hp" to "hp",
         "attack" to "attack", "atk" to "attack",
         "defence" to "defence", "defense" to "defence", "def" to "defence",
@@ -30,9 +23,27 @@ object SpeciesPatch {
         "speed" to "speed", "spe" to "speed",
     )
 
-    /** 解析 "speed=120,hp=40" 形式的规格串；返回 规范key->值 或 null（格式错误）。 */
-    fun parseSpec(spec: String): LinkedHashMap<String, Int>? {
-        val out = LinkedHashMap<String, Int>()
+    data class Parsed(
+        val stats: LinkedHashMap<String, Int>,
+        val primaryTypeSpecified: Boolean,
+        val primaryType: String?,
+        val secondaryTypeSpecified: Boolean,
+        val secondaryType: String?,
+        val abilities: List<String>?,
+    )
+
+    private fun normType(v: String): String? {
+        val t = v.trim().lowercase()
+        if (t.isEmpty() || t == "none" || t == "null" || t == "无" || t == "-") return null
+        return if (t.matches(Regex("[a-z0-9_]+"))) t else null
+    }
+
+    fun parseSpec(spec: String): Parsed? {
+        val stats = LinkedHashMap<String, Int>()
+        var primarySpecified = false; var primary: String? = null
+        var secondarySpecified = false; var secondary: String? = null
+        var abilities: List<String>? = null
+
         for (part in spec.split(',')) {
             val t = part.trim()
             if (t.isEmpty()) continue
@@ -40,34 +51,69 @@ object SpeciesPatch {
             if (eq <= 0) return null
             val rawKey = t.substring(0, eq).trim().lowercase()
             val rawVal = t.substring(eq + 1).trim()
-            val key = ALIASES[rawKey] ?: return null
-            val value = rawVal.toIntOrNull() ?: return null
-            if (value < MIN || value > MAX) return null
-            out[key] = value
+
+            when {
+                STAT_ALIASES.containsKey(rawKey) -> {
+                    val value = rawVal.toIntOrNull() ?: return null
+                    if (value < MIN || value > MAX) return null
+                    stats[STAT_ALIASES.getValue(rawKey)] = value
+                }
+                rawKey == "primarytype" || rawKey == "type1" -> {
+                    primarySpecified = true
+                    primary = normType(rawVal) ?: if (normType(rawVal) == null && rawVal.trim().isNotEmpty()) return null else null
+                }
+                rawKey == "secondarytype" || rawKey == "type2" -> {
+                    secondarySpecified = true
+                    val n = normType(rawVal)
+                    secondary = n
+                    if (n == null && rawVal.trim().isNotEmpty() &&
+                        !listOf("none", "null", "无", "-").contains(rawVal.trim().lowercase())) return null
+                }
+                rawKey == "abilities" || rawKey == "ability" -> {
+                    val list = rawVal.split('|').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+                    if (list.isEmpty()) return null
+                    if (list.any { !it.matches(Regex("h?:?[a-z0-9_]+")) }) return null
+                    abilities = list
+                }
+                else -> return null
+            }
         }
-        return if (out.isEmpty()) null else out
+        if (stats.isEmpty() && !primarySpecified && !secondarySpecified && abilities == null) return null
+        return Parsed(stats, primarySpecified, primary, secondarySpecified, secondary, abilities)
     }
 
-    /** 校验并生成 species_additions JSON。返回 null 表示校验失败。 */
     fun build(speciesId: String, spec: String): String? {
         if (!speciesId.matches(Regex("[a-z0-9_]+"))) return null
-        val stats = parseSpec(spec) ?: return null
-        return buildJson(speciesId, stats)
+        val parsed = parseSpec(spec) ?: return null
+        return buildJson(speciesId, parsed)
     }
 
-    fun buildJson(speciesId: String, stats: Map<String, Int>): String {
-        val sb = StringBuilder()
-        sb.append("{\n")
-        sb.append("  \"target\": \"cobblemon:").append(speciesId).append("\",\n")
-        sb.append("  \"baseStats\": {\n")
-        val entries = stats.entries.toList()
-        entries.forEachIndexed { i, e ->
-            sb.append("    \"").append(e.key).append("\": ").append(e.value)
-            if (i < entries.size - 1) sb.append(",")
-            sb.append("\n")
+    fun buildJson(speciesId: String, p: Parsed): String {
+        val sections = ArrayList<String>()
+        if (p.stats.isNotEmpty()) {
+            val entries = p.stats.entries.toList()
+            val sb = StringBuilder()
+            sb.append("  \"baseStats\": {\n")
+            entries.forEachIndexed { i, e ->
+                sb.append("    \"").append(e.key).append("\": ").append(e.value)
+                if (i < entries.size - 1) sb.append(",")
+                sb.append("\n")
+            }
+            sb.append("  }")
+            sections.add(sb.toString())
         }
-        sb.append("  }\n")
-        sb.append("}\n")
-        return sb.toString()
+        if (p.primaryTypeSpecified) {
+            sections.add("  \"primaryType\": " + jsonNullableString(p.primaryType))
+        }
+        if (p.secondaryTypeSpecified) {
+            sections.add("  \"secondaryType\": " + jsonNullableString(p.secondaryType))
+        }
+        if (p.abilities != null) {
+            val arr = p.abilities.joinToString(", ") { "\"" + it + "\"" }
+            sections.add("  \"abilities\": [$arr]")
+        }
+        return "{\n  \"target\": \"cobblemon:$speciesId\",\n" + sections.joinToString(",\n") + "\n}\n"
     }
+
+    private fun jsonNullableString(v: String?): String = if (v == null) "null" else "\"$v\""
 }

@@ -8,12 +8,16 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
 /**
- * 种族值编辑界面。填写后点「保存」→ 发送 /cobbleeditor set 指令到服务端。
+ * Cobblemon 数据编辑界面（阶段 1+3-lite）：
+ * 种族值 / 属性 / 特性列表。填写后点「保存」→ 发送 /cobbleeditor set 指令到服务端。
  */
 class EditorScreen : Screen(Component.literal("Cobblemon Data Editor")) {
 
     private lateinit var speciesBox: EditBox
     private val fields = LinkedHashMap<String, EditBox>()
+    private lateinit var primaryTypeBox: EditBox
+    private lateinit var secondaryTypeBox: EditBox
+    private lateinit var abilitiesBox: EditBox
 
     private val statKeys = linkedMapOf(
         "hp" to "HP",
@@ -25,26 +29,45 @@ class EditorScreen : Screen(Component.literal("Cobblemon Data Editor")) {
     )
 
     override fun init() {
-        speciesBox = EditBox(this.font, width / 2 - 100, 30, 200, 18, Component.literal("species"))
+        val left = width / 2 - 150
+        speciesBox = EditBox(this.font, left, 26, 120, 16, Component.literal("species"))
         speciesBox.setMaxLength(64)
         addRenderableWidget(speciesBox)
 
-        var y = 56
-        for ((key, label) in statKeys) {
-            val box = EditBox(this.font, width / 2 - 40, y - 4, 70, 16, Component.literal(label))
+        // 六项种族值：两列
+        var i = 0
+        for ((key, _) in statKeys) {
+            val col = i % 2
+            val row = i / 2
+            val x = left + col * 150 + 60
+            val y = 54 + row * 20
+            val box = EditBox(this.font, x, y, 50, 16, Component.literal(key))
             box.setMaxLength(3)
             fields[key] = box
             addRenderableWidget(box)
-            y += 22
+            i++
         }
+
+        val y1 = 54 + 3 * 20 + 6
+        primaryTypeBox = EditBox(this.font, left + 60, y1, 90, 16, Component.literal("type1"))
+        primaryTypeBox.setMaxLength(24)
+        addRenderableWidget(primaryTypeBox)
+
+        secondaryTypeBox = EditBox(this.font, left + 60, y1 + 20, 90, 16, Component.literal("type2"))
+        secondaryTypeBox.setMaxLength(24)
+        addRenderableWidget(secondaryTypeBox)
+
+        abilitiesBox = EditBox(this.font, left + 60, y1 + 40, 220, 16, Component.literal("abilities"))
+        abilitiesBox.setMaxLength(200)
+        addRenderableWidget(abilitiesBox)
 
         addRenderableWidget(
             Button.builder(Component.literal("保存")) { save() }
-                .bounds(width / 2 - 100, y + 6, 90, 20).build()
+                .bounds(left, y1 + 66, 90, 20).build()
         )
         addRenderableWidget(
             Button.builder(Component.literal("关闭")) { onClose() }
-                .bounds(width / 2 + 10, y + 6, 90, 20).build()
+                .bounds(left + 100, y1 + 66, 90, 20).build()
         )
     }
 
@@ -64,8 +87,15 @@ class EditorScreen : Screen(Component.literal("Cobblemon Data Editor")) {
             }
             parts.add("$key=$v")
         }
+        val t1 = primaryTypeBox.value.trim().lowercase()
+        if (t1.isNotEmpty()) parts.add("primaryType=$t1")
+        val t2 = secondaryTypeBox.value.trim().lowercase()
+        if (t2.isNotEmpty()) parts.add("secondaryType=$t2")
+        val ab = abilitiesBox.value.trim().lowercase()
+        if (ab.isNotEmpty()) parts.add("abilities=$ab")
+
         if (parts.isEmpty()) {
-            msg("至少填一项种族值")
+            msg("至少填一项内容")
             return
         }
         val spec = parts.joinToString(",")
@@ -84,14 +114,24 @@ class EditorScreen : Screen(Component.literal("Cobblemon Data Editor")) {
 
     override fun render(g: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
         super.render(g, mouseX, mouseY, partialTick)
-        g.drawCenteredString(this.font, this.title, width / 2, 14, 0xFFFFFF)
-        g.drawString(this.font, "精灵 id:", width / 2 - 160, 35, 0xAAAAAA)
-        var y = 58
+        val left = width / 2 - 150
+        g.drawCenteredString(this.font, this.title, width / 2, 10, 0xFFFFFF)
+        g.drawString(this.font, "精灵 id:", left - 55, 30, 0xAAAAAA)
+
+        var i = 0
         for ((_, label) in statKeys) {
-            g.drawString(this.font, label + ":", width / 2 - 100, y, 0xAAAAAA)
-            y += 22
+            val col = i % 2
+            val row = i / 2
+            g.drawString(this.font, "$label:", left + col * 150, 58 + row * 20, 0xAAAAAA)
+            i++
         }
-        g.drawString(this.font, "留空 = 不改该项；保存后重进世界生效", width / 2 - 100, height - 24, 0x888888)
+        val y1 = 54 + 3 * 20 + 6
+        g.drawString(this.font, "属性1:", left, y1 + 4, 0xAAAAAA)
+        g.drawString(this.font, "属性2:", left, y1 + 24, 0xAAAAAA)
+        g.drawString(this.font, "特性(用|分隔, h:前缀=隐藏):", left - 10, y1 + 44, 0xAAAAAA)
+
+        g.drawString(this.font, "留空=不改；保存后需重进世界生效", left, y1 + 92, 0x888888)
+        g.drawString(this.font, "例: 速度120 / 属性2=flying / 特性=static|h:lightningrod", left, y1 + 104, 0x666666)
     }
 
     override fun isPauseScreen(): Boolean = false

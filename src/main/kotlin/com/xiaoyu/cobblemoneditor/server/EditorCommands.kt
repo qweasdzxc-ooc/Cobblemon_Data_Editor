@@ -46,7 +46,13 @@ object EditorCommands {
         val json = SpeciesPatch.build(species, spec)
         if (json == null) {
             source.sendFailure(
-                Component.literal("参数无效。用法: /cobbleeditor set <species> <stat=value,...>  例: speed=120,hp=40")
+                Component.literal(
+                    "用法: /cobbleeditor set <species> <key=value,...>\n" +
+                        "  种族值: hp/attack/defence/special_attack/special_defence/speed (0-255)\n" +
+                        "  属性: primaryType=electric, secondaryType=flying (none=无)\n" +
+                        "  特性: abilities=static|h:lightningrod (|分隔, h:=隐藏)\n" +
+                        "例: /cobbleeditor set pikachu speed=120,secondaryType=flying"
+                )
             )
             return 0
         }
