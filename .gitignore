@@ -1,0 +1,17 @@
+# Build outputs
+build/
+out/
+.gradle/
+run/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Research artifacts (large downloads / extractions)
+research/temp/
+
+# OS
+Thumbs.db
+.DS_Store
