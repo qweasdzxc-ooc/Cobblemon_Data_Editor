@@ -1,0 +1,21 @@
+pluginManagement {
+	repositories {
+		// China mirrors first (Maven Central / Plugin Portal are unreliable from here)
+		maven {
+			name = 'AliyunPublic'
+			url = 'https://maven.aliyun.com/repository/public'
+		}
+		maven {
+			name = 'AliyunGradlePlugin'
+			url = 'https://maven.aliyun.com/repository/gradle-plugin'
+		}
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+rootProject.name = 'cobblemoneditor'

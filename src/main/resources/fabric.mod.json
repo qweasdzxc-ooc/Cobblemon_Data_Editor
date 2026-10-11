@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "cobblemoneditor",
+	"version": "${version}",
+	"name": "Cobblemon Data Editor",
+	"description": "In-game GUI editor for Cobblemon species stats, abilities and moves.",
+	"authors": ["xiaoyu"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["com.xiaoyu.cobblemoneditor.CobblemonEditor"],
+		"client": ["com.xiaoyu.cobblemoneditor.client.CobblemonEditorClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*",
+		"minecraft": "1.21.1",
+		"cobblemon": ">=1.8.1"
+	}
+}
