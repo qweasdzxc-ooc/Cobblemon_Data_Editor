@@ -1,5 +1,6 @@
 package com.xiaoyu.cobblemoneditor
 
+import com.xiaoyu.cobblemoneditor.server.EditorCommands
 import net.fabricmc.api.ModInitializer
 import org.slf4j.LoggerFactory
 
@@ -9,6 +10,6 @@ object CobblemonEditor : ModInitializer {
 
 	override fun onInitialize() {
 		log.info("[cobblemoneditor] server init")
-		// Phase 1: EditorServer.register()
+		EditorCommands.register()
 	}
 }
