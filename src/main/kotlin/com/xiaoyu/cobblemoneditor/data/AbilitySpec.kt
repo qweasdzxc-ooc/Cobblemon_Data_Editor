@@ -35,18 +35,12 @@ object AbilitySpecFactory {
         return AbilitySpec(id, name, desc, effects)
     }
 
+    // 裸对象字面量（同 MoveSpec）
     fun renderJs(a: AbilitySpec): String {
         val members = ArrayList<String>()
-        members.add("  name: " + '"' + a.displayName + '"')
-        members.add("  desc: " + '"' + a.description + '"')
-        for (e in a.effects) members.add("  " + e.brick.render(e.params))
-        val sb = StringBuilder()
-        sb.appendLine("// 由 Cobblemon Data Editor 生成")
-        sb.appendLine("// 注意：数据格式为框架初版，需在游戏内校准")
-        sb.appendLine("exports.BattleAbilities = exports.BattleAbilities || {};")
-        sb.appendLine("exports.BattleAbilities['" + a.id + "'] = {")
-        sb.appendLine(members.joinToString(",\n"))
-        sb.appendLine("};")
-        return sb.toString()
+        members.add("name: " + '"' + a.displayName + '"')
+        members.add("desc: " + '"' + a.description + '"')
+        for (e in a.effects) members.add(e.brick.render(e.params))
+        return "{ " + members.joinToString(", ") + " }"
     }
 }

@@ -52,6 +52,7 @@ object MoveSpecFactory {
         return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks)
     }
 
+    // 生成裸对象字面量（Cobblemon 会把它嵌进 {"id": <这里>} 求值），不能有 exports/注释
     fun renderJs(m: MoveSpec): String {
         val fields = ArrayList<String>()
         fields.add("num: -1")
@@ -65,19 +66,7 @@ object MoveSpecFactory {
         fields.add("target: " + '"' + m.target + '"')
         fields.add("flags: " + renderFlags(m.flags))
         m.bricks.forEach { b -> fields.add(b.brick.render(b.params)) }
-
-        val sb = StringBuilder()
-        sb.appendLine("// 由 Cobblemon Data Editor 生成")
-        sb.appendLine("// 注意：数据格式为框架初版，需在游戏内校准")
-        sb.appendLine("exports.BattleMovedex = exports.BattleMovedex || {};")
-        sb.appendLine("exports.BattleMovedex['" + m.id + "'] = {")
-        fields.forEachIndexed { i, f ->
-            sb.append("  ").append(f)
-            if (i < fields.size - 1) sb.append(",")
-            sb.appendLine()
-        }
-        sb.appendLine("};")
-        return sb.toString()
+        return "{ " + fields.joinToString(", ") + " }"
     }
 
     private fun renderFlags(flags: List<String>): String =
