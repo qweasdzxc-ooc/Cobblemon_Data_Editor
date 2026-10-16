@@ -1,6 +1,7 @@
-package com.xiaoyu.cobblemoneditor.server
+﻿package com.xiaoyu.cobblemoneditor.server
 
 import com.mojang.brigadier.arguments.StringArgumentType
+import com.xiaoyu.cobblemoneditor.data.AbilitySpecFactory
 import com.xiaoyu.cobblemoneditor.data.DatapackWriter
 import com.xiaoyu.cobblemoneditor.data.MoveSpecFactory
 import com.xiaoyu.cobblemoneditor.data.SpeciesPatch
@@ -42,7 +43,21 @@ object EditorCommands {
                         )
                 )
 
-            dispatcher.register(root.then(setCmd).then(moveCmd))
+            val abilityCmd = Commands.literal("ability")
+                .then(
+                    Commands.literal("add")
+                        .then(
+                            Commands.argument("id", StringArgumentType.word())
+                                .then(
+                                    Commands.argument("spec", StringArgumentType.greedyString())
+                                        .executes { ctx ->
+                                            runAbilityAdd(ctx.source, StringArgumentType.getString(ctx, "id"), StringArgumentType.getString(ctx, "spec"))
+                                        }
+                                )
+                        )
+                )
+
+            dispatcher.register(root.then(setCmd).then(moveCmd).then(abilityCmd))
         }
     }
 
@@ -52,7 +67,7 @@ object EditorCommands {
     private fun runSet(source: CommandSourceStack, species: String, spec: String): Int {
         val json = SpeciesPatch.build(species, spec)
         if (json == null) {
-            source.sendFailure(Component.literal("参数无效。用法: /cobbleeditor set <species> <key=value,...>  例: speed=120,secondaryType=flying"))
+            source.sendFailure(Component.literal("参数无效。用法: /cobbleeditor set <species> <key=value,...>"))
             return 0
         }
         return when (val r = DatapackWriter.writeSpeciesAddition(packRoot(source), PACK_ID, species, json)) {
@@ -71,13 +86,33 @@ object EditorCommands {
         val fullSpec = if (spec.contains("id=")) spec else "id=$id&$spec"
         val move = MoveSpecFactory.parse(fullSpec)
         if (move == null) {
-            source.sendFailure(Component.literal("招式参数无效。用法: /cobbleeditor move add <id> name=...&type=electric&category=special&power=80&accuracy=100&pp=10&target=normal[&bricks=secondary_status:10:par|drain:2]"))
+            source.sendFailure(Component.literal("招式参数无效。用法: /cobbleeditor move add <id> name=...&type=electric&category=special&power=80&accuracy=100&pp=10&target=normal[&bricks=...]"))
             return 0
         }
         val js = MoveSpecFactory.renderJs(move)
         return when (val r = DatapackWriter.writeMove(packRoot(source), PACK_ID, move.id, js)) {
             is DatapackWriter.Result.Written -> {
                 source.sendSuccess({ Component.literal("已保存招式 ${move.id}，重进世界后生效。 文件: ${r.path}") }, false)
+                1
+            }
+            is DatapackWriter.Result.Failed -> {
+                source.sendFailure(Component.literal("写入失败: ${r.message}"))
+                0
+            }
+        }
+    }
+
+    private fun runAbilityAdd(source: CommandSourceStack, id: String, spec: String): Int {
+        val fullSpec = if (spec.contains("id=")) spec else "id=$id&$spec"
+        val ability = AbilitySpecFactory.parse(fullSpec)
+        if (ability == null) {
+            source.sendFailure(Component.literal("特性参数无效。用法: /cobbleeditor ability add <id> name=...&desc=..."))
+            return 0
+        }
+        val js = AbilitySpecFactory.renderJs(ability)
+        return when (val r = DatapackWriter.writeAbility(packRoot(source), PACK_ID, ability.id, js)) {
+            is DatapackWriter.Result.Written -> {
+                source.sendSuccess({ Component.literal("已保存特性 ${ability.id}，重进世界后生效。 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {

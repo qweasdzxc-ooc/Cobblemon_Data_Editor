@@ -1,4 +1,4 @@
-package com.xiaoyu.cobblemoneditor.client
+﻿package com.xiaoyu.cobblemoneditor.client
 
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
@@ -19,7 +19,7 @@ class EditorHubScreen : Screen(Component.literal("Cobblemon Data Editor")) {
                 .bounds(cx, 68, 200, 20).build()
         )
         addRenderableWidget(
-            Button.builder(Component.literal("特性（待做）")) { }
+            Button.builder(Component.literal("特性")) { Minecraft.getInstance().setScreen(AbilityEditorScreen()) }
                 .bounds(cx, 96, 200, 20).build()
         )
         addRenderableWidget(
