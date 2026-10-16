@@ -15,9 +15,9 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     private lateinit var idBox: EditBox
     private lateinit var nameBox: EditBox
     private lateinit var descBox: EditBox
+    private lateinit var paramsBox: EditBox
     private var brickId = "secondary_status"
-    private var paramsValue = "10:brn"
-    private lateinit var paramsDropdown: Dropdown
+    private lateinit var presetsDropdown: Dropdown
 
     override fun init() {
         val left = width / 2 - 130
@@ -29,26 +29,28 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
 
         val d1 = Dropdown(bx, 112, 150, 16, EffectBricks.ALL.map { it.displayName }, EffectBricks.ALL.map { it.id }) { v ->
             brickId = v
-            val b = EffectBricks.byId(v)
-            paramsValue = b?.presets?.firstOrNull()?.first ?: ""
-            rebuildParamsDropdown(132)
+            paramsBox.value = EffectBricks.byId(v)?.presets?.firstOrNull()?.first ?: ""
+            rebuildPresetsDropdown(132)
         }
         addRenderableWidget(d1); dropdowns.add(d1)
-        rebuildParamsDropdown(132)
 
-        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 158, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, 158, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, 158, 68, 20).build())
+        paramsBox = EditBox(this.font, bx, 132, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
+        addRenderableWidget(paramsBox)
+        paramsBox.value = EffectBricks.byId(brickId)?.presets?.firstOrNull()?.first ?: ""
+        rebuildPresetsDropdown(152)
+
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 178, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, 178, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, 178, 68, 20).build())
     }
 
-    private fun rebuildParamsDropdown(y: Int) {
-        if (::paramsDropdown.isInitialized) removeWidget(paramsDropdown)
+    private fun rebuildPresetsDropdown(y: Int) {
+        if (::presetsDropdown.isInitialized) removeWidget(presetsDropdown)
         val b = EffectBricks.byId(brickId)
         val presets = b?.presets ?: emptyList()
         if (presets.isEmpty()) return
-        paramsDropdown = Dropdown(width / 2 - 130 + 70, y, 150, 16, presets.map { it.second }, presets.map { it.first }) { paramsValue = it }
-        paramsDropdown.setSelectedByValue(paramsValue)
-        addRenderableWidget(paramsDropdown); dropdowns.add(paramsDropdown)
+        presetsDropdown = Dropdown(width / 2 - 130 + 70, y, 150, 16, presets.map { it.second }, presets.map { it.first }) { v -> paramsBox.value = v }
+        addRenderableWidget(presetsDropdown); dropdowns.add(presetsDropdown)
     }
 
     private fun save() {
@@ -57,7 +59,8 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=" + desc)
-        parts.add("bricks=" + brickId + (if (paramsValue.isEmpty()) "" else ":" + paramsValue))
+        val pv = paramsBox.value.trim()
+        parts.add("bricks=" + brickId + (if (pv.isEmpty()) "" else ":" + pv))
         val spec = parts.joinToString("&")
         val player = Minecraft.getInstance().player
         if (player == null) { msg("未连接服务器"); return }
@@ -80,8 +83,10 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         g.drawString(this.font, "名称:", left, 68, 0xAAAAAA)
         g.drawString(this.font, "描述:", left, 92, 0xAAAAAA)
         g.drawString(this.font, "效果积木:", left, 116, 0xAAAAAA)
-        g.drawString(this.font, "积木参数:", left, 136, 0xAAAAAA)
-        g.drawString(this.font, "(能力效果积木为占位，待接入)", left, 180, 0x666666)
+        g.drawString(this.font, "积木参数(可改概率):", left, 136, 0xAAAAAA)
+        g.drawString(this.font, "预设:", left, 156, 0xAAAAAA)
+        g.drawString(this.font, "(能力效果积木为占位，待接入)", left, 202, 0x666666)
+        for (d in dropdowns) d.renderExpanded(g, mx, my)
     }
 
     override fun isPauseScreen(): Boolean = false

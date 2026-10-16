@@ -22,15 +22,15 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     private lateinit var powerBox: EditBox
     private lateinit var accBox: EditBox
     private lateinit var ppBox: EditBox
+    private lateinit var paramsBox: EditBox
 
     private var type = "electric"
     private var category = "special"
     private var priority = "0"
     private var target = "normal"
     private var brickId = "secondary_status"
-    private var paramsValue = "10:brn"
     private val selectedFlags = mutableSetOf<String>()
-    private lateinit var paramsDropdown: Dropdown
+    private lateinit var presetsDropdown: Dropdown
 
     override fun init() {
         val left = width / 2 - 160
@@ -66,25 +66,28 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
 
         dd(fy + 2, 150, EffectBricks.ALL.map { it.displayName }, EffectBricks.ALL.map { it.id }, brickId) { v ->
             brickId = v
-            val b = EffectBricks.byId(v)
-            paramsValue = b?.presets?.firstOrNull()?.first ?: ""
-            rebuildParamsDropdown(fy + 20)
+            val first = EffectBricks.byId(v)?.presets?.firstOrNull()?.first ?: ""
+            paramsBox.value = first
+            rebuildPresetsDropdown(fy + 20)
         }
-        rebuildParamsDropdown(fy + 20)
 
-        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, fy + 42, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, fy + 42, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, fy + 42, 68, 20).build())
+        paramsBox = EditBox(this.font, left + 100, fy + 20, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
+        addRenderableWidget(paramsBox)
+        paramsBox.value = EffectBricks.byId(brickId)?.presets?.firstOrNull()?.first ?: ""
+        rebuildPresetsDropdown(fy + 40)
+
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, fy + 62, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, fy + 62, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, fy + 62, 68, 20).build())
     }
 
-    private fun rebuildParamsDropdown(y: Int) {
-        if (::paramsDropdown.isInitialized) removeWidget(paramsDropdown)
+    private fun rebuildPresetsDropdown(y: Int) {
+        if (::presetsDropdown.isInitialized) removeWidget(presetsDropdown)
         val b = EffectBricks.byId(brickId)
         val presets = b?.presets ?: emptyList()
         if (presets.isEmpty()) return
-        paramsDropdown = Dropdown(width / 2 - 160 + 100, y, 150, 16, presets.map { it.second }, presets.map { it.first }) { paramsValue = it }
-        paramsDropdown.setSelectedByValue(paramsValue)
-        addRenderableWidget(paramsDropdown); dropdowns.add(paramsDropdown)
+        presetsDropdown = Dropdown(width / 2 - 160 + 100, y, 150, 16, presets.map { it.second }, presets.map { it.first }) { v -> paramsBox.value = v }
+        addRenderableWidget(presetsDropdown); dropdowns.add(presetsDropdown)
     }
 
     private fun save() {
@@ -100,7 +103,8 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         parts.add("priority=" + priority)
         parts.add("target=" + target)
         if (selectedFlags.isNotEmpty()) parts.add("flags=" + selectedFlags.joinToString(","))
-        parts.add("bricks=" + brickId + (if (paramsValue.isEmpty()) "" else ":" + paramsValue))
+        val pv = paramsBox.value.trim()
+        parts.add("bricks=" + brickId + (if (pv.isEmpty()) "" else ":" + pv))
         val spec = parts.joinToString("&")
         val player = Minecraft.getInstance().player
         if (player == null) { msg("未连接服务器"); return }
@@ -129,6 +133,9 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         g.drawString(this.font, "优先度:", left, 168, 0xAAAAAA)
         g.drawString(this.font, "目标:", left, 188, 0xAAAAAA)
         g.drawString(this.font, "子标签:", left, 208, 0xAAAAAA)
+        g.drawString(this.font, "积木参数(可改概率等):", left, 226, 0xAAAAAA)
+        g.drawString(this.font, "预设:", left, 246, 0xAAAAAA)
+        for (d in dropdowns) d.renderExpanded(g, mx, my)
     }
 
     override fun isPauseScreen(): Boolean = false

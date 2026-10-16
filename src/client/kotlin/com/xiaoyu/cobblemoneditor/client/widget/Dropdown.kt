@@ -7,8 +7,8 @@ import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.network.chat.Component
 
 /**
- * 真正的下拉选择框：点开显示选项列表，点选后收起。
- * 展开态的点击由所在 Screen 的 mouseClicked 转发到 handleExpandedClick。
+ * 下拉选择框。展开列表由所在 Screen 在 render() 末尾调用 renderExpanded 绘制，
+ * 保证盖在其它控件之上（不被遮挡）。
  */
 class Dropdown(
     x: Int, y: Int, w: Int, h: Int,
@@ -38,7 +38,6 @@ class Dropdown(
         open = !open
     }
 
-    /** 展开态点击：选中某项或收起。返回 true 表示已消费该点击。 */
     fun handleExpandedClick(mx: Double, my: Double): Boolean {
         if (!open) return false
         val idx = ((my - (y + height)) / height).toInt()
@@ -58,15 +57,17 @@ class Dropdown(
         g.fill(x, y, x + width, y + height, if (hover || open) 0xFF3A3A3A.toInt() else 0xFF262626.toInt())
         g.renderOutline(x, y, width, height, 0xFFAAAAAA.toInt())
         g.drawCenteredString(font, Component.literal(labels[selectedIndex] + (if (open) " ▲" else " ▼")), x + width / 2, y + (height - 8) / 2, 0xFFFFFFFF.toInt())
+    }
 
-        if (open) {
-            for (i in labels.indices) {
-                val oy = y + height + i * height
-                val oh = mx >= x && mx <= x + width && my >= oy && my < oy + height
-                g.fill(x, oy, x + width, oy + height, if (oh) 0xFF4A4A4A.toInt() else 0xFF2E2E2E.toInt())
-                g.renderOutline(x, oy, width, height, 0xFF777777.toInt())
-                g.drawCenteredString(font, Component.literal(labels[i]), x + width / 2, oy + (height - 8) / 2, 0xFFFFFFFF.toInt())
-            }
+    fun renderExpanded(g: GuiGraphics, mx: Int, my: Int) {
+        if (!open) return
+        val font = Minecraft.getInstance().font
+        for (i in labels.indices) {
+            val oy = y + height + i * height
+            val oh = mx >= x && mx <= x + width && my >= oy && my < oy + height
+            g.fill(x, oy, x + width, oy + height, if (oh) 0xFF4A4A4A.toInt() else 0xFF2E2E2E.toInt())
+            g.renderOutline(x, oy, width, height, 0xFF777777.toInt())
+            g.drawCenteredString(font, Component.literal(labels[i]), x + width / 2, oy + (height - 8) / 2, 0xFFFFFFFF.toInt())
         }
     }
 }
