@@ -1,4 +1,4 @@
-# deploy.ps1 - 一键构建并部署到整合包 mods + 备份，自动清理旧版本
+﻿# deploy.ps1 - 一键构建并部署到整合包 mods + 备份，自动清理旧版本
 param(
     [string]$ModsDir = "E:\PCL\PCL2\.minecraft\versions\Lets go cobblemon master [6.0.2fix]\mods",
     [string]$BackupDir = "E:\PCL\自制修改mod"
