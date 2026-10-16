@@ -16,3 +16,6 @@ research/temp/
 # OS
 Thumbs.db
 .DS_Store
+
+# 解包出来的 Cobblemon showdown 引擎（仅用于研究，勿提交）
+research/showdown/
