@@ -1,9 +1,7 @@
 package com.xiaoyu.cobblemoneditor.data
 
-/** 一个已解析的效果积木（含参数）。 */
 data class ParsedBrick(val brick: EffectBrick, val params: List<String>)
 
-/** 招式定义。 */
 data class MoveSpec(
     val id: String,
     val displayName: String,
@@ -14,16 +12,11 @@ data class MoveSpec(
     val pp: Int,
     val priority: Int,
     val target: String,
+    val flags: List<String>,
     val bricks: List<ParsedBrick>,
 )
 
-/**
- * 招式：解析 + 生成 Showdown JS。
- * 命令规格（框架初版）：
- *   /cobbleeditor move add <id> name=...&type=electric&category=special&power=80&accuracy=100&pp=10&priority=0&target=normal&bricks=secondary_status:10:par|drain:2
- */
 object MoveSpecFactory {
-
     private val CATEGORIES = setOf("physical", "special", "status")
 
     fun parse(spec: String): MoveSpec? {
@@ -46,6 +39,7 @@ object MoveSpecFactory {
         val pp = m["pp"]?.toIntOrNull() ?: 10
         val priority = m["priority"]?.toIntOrNull() ?: 0
         val target = m["target"] ?: "normal"
+        val flags = m["flags"]?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() } ?: emptyList()
 
         val bricks = ArrayList<ParsedBrick>()
         m["bricks"]?.split('|')?.forEach { b ->
@@ -55,38 +49,39 @@ object MoveSpecFactory {
             val brick = EffectBricks.byId(parts[0].trim()) ?: return null
             bricks.add(ParsedBrick(brick, parts.drop(1).map { it.trim() }))
         }
-        return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, bricks)
+        return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks)
     }
 
     fun renderJs(m: MoveSpec): String {
         val fields = ArrayList<String>()
         fields.add("num: -1")
-        fields.add("name: \"${escape(m.displayName)}\"")
-        fields.add("type: \"${cap(m.type)}\"")
-        fields.add("category: \"${cap(m.category)}\"")
+        fields.add("name: " + '"' + m.displayName + '"')
+        fields.add("type: " + '"' + cap(m.type) + '"')
+        fields.add("category: " + '"' + cap(m.category) + '"')
         m.basePower?.let { fields.add("basePower: $it") }
         fields.add("accuracy: ${m.accuracy}")
         fields.add("pp: ${m.pp}")
         fields.add("priority: ${m.priority}")
-        fields.add("target: \"${m.target}\"")
-        fields.add("flags: {}")
+        fields.add("target: " + '"' + m.target + '"')
+        fields.add("flags: ${renderFlags(m.flags)}")
         m.bricks.forEach { b -> fields.add(b.brick.render(b.params)) }
 
         val sb = StringBuilder()
-        sb.append("// 由 Cobblemon Data Editor 生成\n")
-        sb.append("// 注意：数据格式为框架初版，需在游戏内校准\n")
-        sb.append("exports.BattleMovedex = exports.BattleMovedex || {};\n")
-        sb.append("exports.BattleMovedex['").append(m.id).append("'] = {\n")
+        sb.appendLine("// 由 Cobblemon Data Editor 生成")
+        sb.appendLine("// 注意：数据格式为框架初版，需在游戏内校准")
+        sb.appendLine("exports.BattleMovedex = exports.BattleMovedex || {};")
+        sb.appendLine("exports.BattleMovedex['" + m.id + "'] = {")
         fields.forEachIndexed { i, f ->
             sb.append("  ").append(f)
             if (i < fields.size - 1) sb.append(",")
-            sb.append("\n")
+            sb.appendLine()
         }
-        sb.append("};\n")
+        sb.appendLine("};")
         return sb.toString()
     }
 
-    private fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
+    private fun renderFlags(flags: List<String>): String =
+        if (flags.isEmpty()) "{}" else "{ " + flags.joinToString(", ") { "$it: 1" } + " }"
 
-    private fun escape(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+    private fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
 }

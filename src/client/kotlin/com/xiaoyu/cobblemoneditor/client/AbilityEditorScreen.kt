@@ -1,8 +1,10 @@
-﻿package com.xiaoyu.cobblemoneditor.client
+package com.xiaoyu.cobblemoneditor.client
 
+import com.xiaoyu.cobblemoneditor.data.EffectBricks
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.components.CycleButton
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
@@ -12,6 +14,8 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     private lateinit var idBox: EditBox
     private lateinit var nameBox: EditBox
     private lateinit var descBox: EditBox
+    private lateinit var bricksParamsBox: EditBox
+    private var brickId = "secondary_status"
 
     override fun init() {
         val left = width / 2 - 130
@@ -20,8 +24,17 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         nameBox = EditBox(this.font, bx, 64, 180, 16, Component.empty()); nameBox.setMaxLength(64)
         descBox = EditBox(this.font, bx, 88, 250, 16, Component.empty()); descBox.setMaxLength(200)
         addRenderableWidget(idBox); addRenderableWidget(nameBox); addRenderableWidget(descBox)
-        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 120, 90, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 110, 120, 90, 20).build())
+
+        addRenderableWidget(CycleButton.builder { v: String -> Component.literal(EffectBricks.byId(v)?.displayName ?: v) }
+            .withValues(EffectBricks.ids())
+            .withInitialValue(brickId)
+            .create(bx, 112, 150, 16, Component.literal("效果积木"), { _, v -> brickId = v }))
+
+        bricksParamsBox = EditBox(this.font, bx, 132, 150, 16, Component.empty()); bricksParamsBox.setMaxLength(100)
+        addRenderableWidget(bricksParamsBox)
+
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 158, 90, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 110, 158, 90, 20).build())
     }
 
     private fun save() {
@@ -30,6 +43,8 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=$name")
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=$desc")
+        val bp = bricksParamsBox.value.trim()
+        parts.add(if (bp.isEmpty()) "bricks=$brickId" else "bricks=$brickId:$bp")
         val spec = parts.joinToString("&")
         val player = Minecraft.getInstance().player
         if (player == null) { msg("未连接服务器"); return }
@@ -46,7 +61,9 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         g.drawString(this.font, "id:", left, 44, 0xAAAAAA)
         g.drawString(this.font, "名称:", left, 68, 0xAAAAAA)
         g.drawString(this.font, "描述:", left, 92, 0xAAAAAA)
-        g.drawString(this.font, "(效果积木：后续版本加入)", left, 150, 0x666666)
+        g.drawString(this.font, "效果积木:", left, 116, 0xAAAAAA)
+        g.drawString(this.font, "积木参数(如 10:par):", left, 136, 0xAAAAAA)
+        g.drawString(this.font, "(能力效果积木为占位，待接入)", left, 180, 0x666666)
     }
 
     override fun isPauseScreen(): Boolean = false

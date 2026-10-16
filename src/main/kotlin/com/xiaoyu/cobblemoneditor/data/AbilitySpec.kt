@@ -1,15 +1,16 @@
-﻿package com.xiaoyu.cobblemoneditor.data
+package com.xiaoyu.cobblemoneditor.data
 
-/** 特性定义（框架初版：名称/描述；效果积木后续加）。 */
+/** 特性定义（框架初版：名称/描述；效果积木为占位，待接入 Showdown 能力事件）。 */
 data class AbilitySpec(
     val id: String,
     val displayName: String,
     val description: String,
+    val bricksNote: String?,
 )
 
 /**
  * 特性：解析 + 生成 Showdown JS。
- *   /cobbleeditor ability add <id> name=...&desc=...
+ *   /cobbleeditor ability add <id> name=...&desc=...&bricks=...
  */
 object AbilitySpecFactory {
 
@@ -26,20 +27,21 @@ object AbilitySpecFactory {
         if (!id.matches(Regex("[a-z0-9_]+"))) return null
         val name = m["name"] ?: id
         val desc = m["desc"] ?: ""
-        return AbilitySpec(id, name, desc)
+        return AbilitySpec(id, name, desc, m["bricks"])
     }
 
     fun renderJs(a: AbilitySpec): String {
         val sb = StringBuilder()
-        sb.append("// 由 Cobblemon Data Editor 生成\n")
-        sb.append("// 注意：数据格式为框架初版，需在游戏内校准\n")
-        sb.append("exports.BattleAbilities = exports.BattleAbilities || {};\n")
-        sb.append("exports.BattleAbilities['").append(a.id).append("'] = {\n")
-        sb.append("  name: \"").append(esc(a.displayName)).append("\",\n")
-        sb.append("  desc: \"").append(esc(a.description)).append("\"\n")
-        sb.append("};\n")
+        sb.appendLine("// 由 Cobblemon Data Editor 生成")
+        sb.appendLine("// 注意：数据格式为框架初版，需在游戏内校准")
+        sb.appendLine("exports.BattleAbilities = exports.BattleAbilities || {};")
+        sb.appendLine("exports.BattleAbilities['" + a.id + "'] = {")
+        sb.appendLine("  name: " + '"' + a.displayName + '"' + ",")
+        sb.appendLine("  desc: " + '"' + a.description + '"')
+        if (a.bricksNote != null) {
+            sb.appendLine("  // 效果积木(占位,待接入 Showdown 能力事件): " + a.bricksNote)
+        }
+        sb.appendLine("};")
         return sb.toString()
     }
-
-    private fun esc(s: String) = s.replace("\"", "'")
 }

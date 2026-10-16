@@ -1,137 +1,103 @@
 package com.xiaoyu.cobblemoneditor.client
 
+import com.xiaoyu.cobblemoneditor.data.TypeCatalog
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
+import net.minecraft.client.gui.components.CycleButton
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 
-/**
- * Cobblemon 数据编辑界面（阶段 1+3-lite）：
- * 种族值 / 属性 / 特性列表。填写后点「保存」→ 发送 /cobbleeditor set 指令到服务端。
- */
-class EditorScreen : Screen(Component.literal("Cobblemon Data Editor")) {
+class EditorScreen : Screen(Component.literal("精灵编辑器")) {
 
-    private lateinit var speciesBox: EditBox
-    private val fields = LinkedHashMap<String, EditBox>()
-    private lateinit var primaryTypeBox: EditBox
-    private lateinit var secondaryTypeBox: EditBox
-    private lateinit var abilitiesBox: EditBox
+    private val speciesList: List<Pair<String, String>> = ClientCatalogs.species()
+    private val abilitiesList: List<Pair<String, String>> = ClientCatalogs.abilities()
+    private var speciesIdx = 0
+    private var type1: String? = null
+    private var type2: String? = null
+    private var ability: String? = null
+    private val statBoxes = LinkedHashMap<String, EditBox>()
 
-    private val statKeys = linkedMapOf(
-        "hp" to "HP",
-        "attack" to "攻击",
-        "defence" to "防御",
-        "special_attack" to "特攻",
-        "special_defence" to "特防",
-        "speed" to "速度",
+    private val stats = listOf(
+        "hp" to "HP", "attack" to "攻击", "defence" to "防御",
+        "special_attack" to "特攻", "special_defence" to "特防", "speed" to "速度",
     )
 
     override fun init() {
         val left = width / 2 - 150
-        speciesBox = EditBox(this.font, left, 26, 120, 16, Component.literal("species"))
-        speciesBox.setMaxLength(64)
-        addRenderableWidget(speciesBox)
 
-        // 六项种族值：两列
+        if (speciesList.isNotEmpty()) {
+            addRenderableWidget(CycleButton.builder<Int> { i -> Component.literal(speciesList[i].second) }
+                .withValues((0 until speciesList.size).toList())
+                .withInitialValue(speciesIdx)
+                .create(left, 20, 180, 18, Component.literal("精灵"), { _, i -> speciesIdx = i }))
+        }
+
         var i = 0
-        for ((key, _) in statKeys) {
-            val col = i % 2
-            val row = i / 2
-            val x = left + col * 150 + 60
-            val y = 54 + row * 20
-            val box = EditBox(this.font, x, y, 50, 16, Component.literal(key))
-            box.setMaxLength(3)
-            fields[key] = box
-            addRenderableWidget(box)
+        for ((k, _) in stats) {
+            val col = i % 2; val row = i / 2
+            val box = EditBox(this.font, left + 60 + col * 150, 44 + row * 20, 50, 16, Component.empty())
+            box.setMaxLength(3); addRenderableWidget(box); statBoxes[k] = box
             i++
         }
 
-        val y1 = 54 + 3 * 20 + 6
-        primaryTypeBox = EditBox(this.font, left + 60, y1, 90, 16, Component.literal("type1"))
-        primaryTypeBox.setMaxLength(24)
-        addRenderableWidget(primaryTypeBox)
+        val typeOpts: List<String?> = listOf(null) + TypeCatalog.TYPES.map { it.first }
+        addRenderableWidget(CycleButton.builder<String?> { t -> Component.literal(if (t == null) "不添加" else TypeCatalog.zh(t!!)) }
+            .withValues(typeOpts)
+            .withInitialValue(type1)
+            .create(left, 106, 90, 16, Component.literal("属性1"), { _, v -> type1 = v }))
+        addRenderableWidget(CycleButton.builder<String?> { t -> Component.literal(if (t == null) "不添加" else TypeCatalog.zh(t!!)) }
+            .withValues(typeOpts)
+            .withInitialValue(type2)
+            .create(left + 100, 106, 90, 16, Component.literal("属性2"), { _, v -> type2 = v }))
 
-        secondaryTypeBox = EditBox(this.font, left + 60, y1 + 20, 90, 16, Component.literal("type2"))
-        secondaryTypeBox.setMaxLength(24)
-        addRenderableWidget(secondaryTypeBox)
+        val abOpts: List<String?> = listOf(null) + abilitiesList.map { it.first }
+        addRenderableWidget(CycleButton.builder<String?> { a -> Component.literal(if (a == null) "不改" else (abilitiesList.firstOrNull { it.first == a }?.second ?: a!!)) }
+            .withValues(abOpts)
+            .withInitialValue(ability)
+            .create(left, 128, 200, 16, Component.literal("特性"), { _, v -> ability = v }))
 
-        abilitiesBox = EditBox(this.font, left + 60, y1 + 40, 220, 16, Component.literal("abilities"))
-        abilitiesBox.setMaxLength(200)
-        addRenderableWidget(abilitiesBox)
-
-        addRenderableWidget(
-            Button.builder(Component.literal("保存")) { save() }
-                .bounds(left, y1 + 66, 90, 20).build()
-        )
-        addRenderableWidget(
-            Button.builder(Component.literal("关闭")) { onClose() }
-                .bounds(left + 100, y1 + 66, 90, 20).build()
-        )
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 152, 90, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 110, 152, 90, 20).build())
     }
 
     private fun save() {
-        val species = speciesBox.value.trim().lowercase()
-        if (species.isEmpty()) {
-            msg("请先填精灵 id，例如 pikachu")
-            return
-        }
+        if (speciesList.isEmpty()) { msg("未加载到精灵列表"); return }
+        val speciesId = speciesList[speciesIdx].first
         val parts = ArrayList<String>()
-        for ((key, box) in fields) {
-            val v = box.value.trim()
-            if (v.isEmpty()) continue
-            if (v.toIntOrNull() == null) {
-                msg("$key 必须是数字")
-                return
-            }
-            parts.add("$key=$v")
+        for ((k, box) in statBoxes) {
+            val v = box.value.trim(); if (v.isEmpty()) continue
+            if (v.toIntOrNull() == null) { msg("$k 必须是数字"); return }
+            parts.add("$k=$v")
         }
-        val t1 = primaryTypeBox.value.trim().lowercase()
-        if (t1.isNotEmpty()) parts.add("primaryType=$t1")
-        val t2 = secondaryTypeBox.value.trim().lowercase()
-        if (t2.isNotEmpty()) parts.add("secondaryType=$t2")
-        val ab = abilitiesBox.value.trim().lowercase()
-        if (ab.isNotEmpty()) parts.add("abilities=$ab")
-
-        if (parts.isEmpty()) {
-            msg("至少填一项内容")
-            return
-        }
+        type1?.let { parts.add("primaryType=$it") }
+        type2?.let { parts.add("secondaryType=$it") }
+        ability?.let { parts.add("abilities=$it") }
+        if (parts.isEmpty()) { msg("至少填一项内容"); return }
         val spec = parts.joinToString(",")
         val player = Minecraft.getInstance().player
-        if (player == null) {
-            msg("未连接服务器")
-            return
-        }
-        player.connection.sendCommand("cobbleeditor set $species $spec")
+        if (player == null) { msg("未连接服务器"); return }
+        player.connection.sendCommand("cobbleeditor set $speciesId $spec")
         onClose()
     }
 
-    private fun msg(s: String) {
-        Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false)
-    }
+    private fun msg(s: String) { Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false) }
 
-    override fun render(g: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
-        super.render(g, mouseX, mouseY, partialTick)
+    override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
+        super.render(g, mx, my, p)
         val left = width / 2 - 150
-        g.drawCenteredString(this.font, this.title, width / 2, 10, 0xFFFFFF)
-        g.drawString(this.font, "精灵 id:", left - 55, 30, 0xAAAAAA)
-
+        g.drawCenteredString(this.font, this.title, width / 2, 8, 0xFFFFFF)
         var i = 0
-        for ((_, label) in statKeys) {
-            val col = i % 2
-            val row = i / 2
-            g.drawString(this.font, "$label:", left + col * 150, 58 + row * 20, 0xAAAAAA)
+        for ((_, label) in stats) {
+            val col = i % 2; val row = i / 2
+            g.drawString(this.font, "$label:", left + col * 150, 48 + row * 20, 0xAAAAAA)
             i++
         }
-        val y1 = 54 + 3 * 20 + 6
-        g.drawString(this.font, "属性1:", left, y1 + 4, 0xAAAAAA)
-        g.drawString(this.font, "属性2:", left, y1 + 24, 0xAAAAAA)
-        g.drawString(this.font, "特性(用|分隔, h:前缀=隐藏):", left - 10, y1 + 44, 0xAAAAAA)
-
-        g.drawString(this.font, "留空=不改；保存后需重进世界生效", left, y1 + 92, 0x888888)
-        g.drawString(this.font, "例: 速度120 / 属性2=flying / 特性=static|h:lightningrod", left, y1 + 104, 0x666666)
+        g.drawString(this.font, "属性1:", left, 110, 0xAAAAAA)
+        g.drawString(this.font, "属性2:", left + 100, 110, 0xAAAAAA)
+        g.drawString(this.font, "特性:", left, 132, 0xAAAAAA)
+        g.drawString(this.font, "留空=不改该项；保存后重进世界生效", left, 176, 0x888888)
     }
 
     override fun isPauseScreen(): Boolean = false

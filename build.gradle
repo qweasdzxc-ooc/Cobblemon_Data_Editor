@@ -29,7 +29,7 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-language-kotlin:1.13.6+kotlin.2.2.20"
 
 	// Cobblemon API: compile-only (players install Cobblemon themselves)
-	modCompileOnly "com.cobblemon:mod:${project.cobblemon_version}"
+	modCompileOnly "com.cobblemon:fabric:${project.cobblemon_version}"
 	// Dev runtime so the dev client actually launches with Cobblemon
 	modLocalRuntime "com.cobblemon:fabric:${project.cobblemon_version}"
 }
