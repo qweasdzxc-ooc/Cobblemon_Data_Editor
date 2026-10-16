@@ -45,7 +45,7 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         ppBox = txt(102, 50, 3)
 
         fun dd(y: Int, w: Int, labels: List<String>, values: List<String>, cur: String, cb: (String) -> Unit): Dropdown {
-            val d = Dropdown(left + 100, y, w, 16, labels, values, cb)
+            val d = Dropdown(left + 100, y, w, 16, labels, values) { cb(it) }
             d.setSelectedByValue(cur); addRenderableWidget(d); dropdowns.add(d); return d
         }
 

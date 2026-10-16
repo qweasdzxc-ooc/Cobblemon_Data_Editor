@@ -12,10 +12,13 @@ import net.minecraft.network.chat.Component
 class EditorScreen : Screen(Component.literal("精灵编辑器")) {
 
     private val dropdowns = mutableListOf<Dropdown>()
-    private val speciesList: List<Pair<String, String>> = ClientCatalogs.species()
+    private val speciesList: List<Triple<String, String, String>> = ClientCatalogs.species()
     private val abilitiesList: List<Pair<String, String>> = ClientCatalogs.abilities()
     private val statBoxes = LinkedHashMap<String, EditBox>()
+    private lateinit var speciesSearchBox: EditBox
+    private lateinit var speciesDropdown: Dropdown
     private var speciesId = ""
+    private var lastSearch = ""
     private var type1 = ""
     private var type2 = ""
     private var ability1 = ""
@@ -30,11 +33,11 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
     override fun init() {
         val left = width / 2 - 150
 
-        if (speciesList.isNotEmpty()) {
-            speciesId = speciesList[0].first
-            val d = Dropdown(left, 18, 180, 16, speciesList.map { it.second }, speciesList.map { it.first }) { speciesId = it }
-            addRenderableWidget(d); dropdowns.add(d)
-        }
+        speciesSearchBox = EditBox(this.font, left + 150, 18, 120, 16, Component.empty())
+        speciesSearchBox.setMaxLength(64)
+        addRenderableWidget(speciesSearchBox)
+        if (speciesList.isNotEmpty()) speciesId = speciesList[0].first
+        rebuildSpeciesDropdown()
 
         var i = 0
         for ((k, _) in stats) {
@@ -53,16 +56,32 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
 
         val abLabels = listOf("不改") + abilitiesList.map { it.second }
         val abValues = listOf("") + abilitiesList.map { it.first }
-        val a1 = Dropdown(left, 116, 110, 14, abLabels, abValues) { ability1 = it }
+        val a1 = Dropdown(left, 116, 110, 14, abLabels, abValues, onChange = { ability1 = it }, maxVisible = 10)
         addRenderableWidget(a1); dropdowns.add(a1)
-        val a2 = Dropdown(left + 120, 116, 110, 14, abLabels, abValues) { ability2 = it }
+        val a2 = Dropdown(left + 120, 116, 110, 14, abLabels, abValues, onChange = { ability2 = it }, maxVisible = 10)
         addRenderableWidget(a2); dropdowns.add(a2)
-        val a3 = Dropdown(left, 136, 230, 14, abLabels, abValues) { hiddenAbility = it }
+        val a3 = Dropdown(left, 136, 230, 14, abLabels, abValues, onChange = { hiddenAbility = it }, maxVisible = 10)
         addRenderableWidget(a3); dropdowns.add(a3)
 
         addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 158, 68, 20).build())
         addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, 158, 68, 20).build())
         addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, 158, 68, 20).build())
+    }
+
+    private fun filteredSpecies(): List<Triple<String, String, String>> {
+        val q = speciesSearchBox.value.trim().lowercase()
+        if (q.isEmpty()) return speciesList
+        return speciesList.filter { (id, en, zh) -> id.contains(q) || en.lowercase().contains(q) || zh.contains(q) }
+    }
+
+    private fun rebuildSpeciesDropdown() {
+        if (::speciesDropdown.isInitialized) removeWidget(speciesDropdown)
+        val f = filteredSpecies()
+        if (f.isEmpty()) return
+        if (f.none { it.first == speciesId }) speciesId = f[0].first
+        speciesDropdown = Dropdown(width / 2 - 150, 18, 140, 16, f.map { it.third }, f.map { it.first }, onChange = { speciesId = it }, maxVisible = 10)
+        speciesDropdown.setSelectedByValue(speciesId)
+        addRenderableWidget(speciesDropdown); dropdowns.add(speciesDropdown)
     }
 
     private fun save() {
@@ -90,15 +109,26 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
 
     private fun msg(s: String) { Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false) }
 
+    override fun tick() {
+        val q = speciesSearchBox.value.trim().lowercase()
+        if (q != lastSearch) { lastSearch = q; rebuildSpeciesDropdown() }
+    }
+
     override fun mouseClicked(mx: Double, my: Double, button: Int): Boolean {
         for (d in dropdowns) if (d.open) { d.handleExpandedClick(mx, my); return true }
         return super.mouseClicked(mx, my, button)
     }
 
+    override fun mouseScrolled(mx: Double, my: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
+        for (d in dropdowns) if (d.open) { d.handleScroll(verticalAmount); return true }
+        return super.mouseScrolled(mx, my, horizontalAmount, verticalAmount)
+    }
+
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
         super.render(g, mx, my, p)
         val left = width / 2 - 150
-        g.drawCenteredString(this.font, this.title, width / 2, 6, 0xFFFFFF)
+        g.drawCenteredString(this.font, this.title, width / 2, 4, 0xFFFFFF)
+        g.drawString(this.font, "精灵(搜索):", left, 22, 0xAAAAAA)
         var i = 0
         for ((_, label) in stats) {
             val col = i % 2; val row = i / 2
