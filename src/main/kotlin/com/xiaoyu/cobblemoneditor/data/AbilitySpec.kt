@@ -1,6 +1,5 @@
 package com.xiaoyu.cobblemoneditor.data
 
-/** 特性定义（框架初版：名称/描述；效果积木为占位，待接入 Showdown 能力事件）。 */
 data class AbilitySpec(
     val id: String,
     val displayName: String,
@@ -8,10 +7,6 @@ data class AbilitySpec(
     val bricksNote: String?,
 )
 
-/**
- * 特性：解析 + 生成 Showdown JS。
- *   /cobbleeditor ability add <id> name=...&desc=...&bricks=...
- */
 object AbilitySpecFactory {
 
     fun parse(spec: String): AbilitySpec? {

@@ -58,12 +58,12 @@ object MoveSpecFactory {
         fields.add("name: " + '"' + m.displayName + '"')
         fields.add("type: " + '"' + cap(m.type) + '"')
         fields.add("category: " + '"' + cap(m.category) + '"')
-        m.basePower?.let { fields.add("basePower: $it") }
-        fields.add("accuracy: ${m.accuracy}")
-        fields.add("pp: ${m.pp}")
-        fields.add("priority: ${m.priority}")
+        m.basePower?.let { fields.add("basePower: " + it) }
+        fields.add("accuracy: " + m.accuracy)
+        fields.add("pp: " + m.pp)
+        fields.add("priority: " + m.priority)
         fields.add("target: " + '"' + m.target + '"')
-        fields.add("flags: ${renderFlags(m.flags)}")
+        fields.add("flags: " + renderFlags(m.flags))
         m.bricks.forEach { b -> fields.add(b.brick.render(b.params)) }
 
         val sb = StringBuilder()
@@ -81,7 +81,7 @@ object MoveSpecFactory {
     }
 
     private fun renderFlags(flags: List<String>): String =
-        if (flags.isEmpty()) "{}" else "{ " + flags.joinToString(", ") { "$it: 1" } + " }"
+        if (flags.isEmpty()) "{}" else "{ " + flags.joinToString(", ") { it + ": 1" } + " }"
 
     private fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
 }
