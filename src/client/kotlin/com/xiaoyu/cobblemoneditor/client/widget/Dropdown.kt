@@ -6,9 +6,7 @@ import net.minecraft.client.gui.components.AbstractWidget
 import net.minecraft.client.gui.narration.NarrationElementOutput
 import net.minecraft.network.chat.Component
 
-/**
- * 下拉选择框（支持滚动）。onChange 必须是最后一个参数，方便用尾随 lambda。
- */
+/** 下拉选择框（支持滚动）。onChange 必须是最后一个参数，方便用尾随 lambda。 */
 class Dropdown(
     x: Int, y: Int, w: Int, h: Int,
     private val labels: List<String>,
@@ -76,13 +74,24 @@ class Dropdown(
         if (!open) return
         val font = Minecraft.getInstance().font
         val visible = minOf(maxVisible, labels.size)
+        val listTop = y + height
+        val listBottom = listTop + visible * height
+        g.fill(x, listTop, x + width, listBottom, 0xF01A1A1A.toInt())
+        g.renderOutline(x, listTop, width, visible * height, 0xFF888888.toInt())
         val end = minOf(scroll + visible, labels.size)
         for (k in scroll until end) {
-            val oy = y + height + (k - scroll) * height
+            val oy = listTop + (k - scroll) * height
             val oh = mx >= x && mx <= x + width && my >= oy && my < oy + height
-            g.fill(x, oy, x + width, oy + height, if (oh) 0xFF4A4A4A.toInt() else 0xFF2E2E2E.toInt())
-            g.renderOutline(x, oy, width, height, 0xFF777777.toInt())
-            g.drawCenteredString(font, Component.literal(labels[k]), x + width / 2, oy + (height - 8) / 2, 0xFFFFFFFF.toInt())
+            if (k == selectedIndex) g.fill(x, oy, x + width, oy + height, 0xFF2A4A6A.toInt())
+            else if (oh) g.fill(x, oy, x + width, oy + height, 0xFF3B82F6.toInt())
+            val color = if (k == selectedIndex) 0xFFFFD54F.toInt() else 0xFFFFFFFF.toInt()
+            g.drawCenteredString(font, Component.literal(labels[k]), x + width / 2, oy + (height - 8) / 2, color)
+        }
+        val total = labels.size
+        if (total > visible) {
+            val barH = (visible * height * visible / total).coerceAtLeast(8)
+            val barY = listTop + (scroll * (visible * height - barH)) / (total - visible)
+            g.fill(x + width - 2, barY, x + width, barY + barH, 0x88CCCCCC.toInt())
         }
     }
 }

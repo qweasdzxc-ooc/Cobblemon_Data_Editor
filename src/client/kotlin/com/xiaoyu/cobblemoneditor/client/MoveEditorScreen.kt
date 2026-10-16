@@ -120,6 +120,7 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     }
 
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
+        g.fill(0, 0, width, height, 0xC0101010.toInt())
         super.render(g, mx, my, p)
         val left = width / 2 - 160
         g.drawCenteredString(this.font, this.title, width / 2, 8, 0xFFFFFF)
