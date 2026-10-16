@@ -49,6 +49,10 @@ kotlin {
 	jvmToolchain(21)
 }
 
+base {
+	archivesName = "${project.archives_base_name}-${project.mod_version}"
+}
+
 java {
 	withSourcesJar()
 	sourceCompatibility = JavaVersion.VERSION_21
