@@ -32,10 +32,22 @@ object TargetCatalog {
     fun byIndex(i: Int): Pair<String, String> { val n = OPTIONS.size; return OPTIONS[((i % n) + n) % n] }
 }
 
+/**
+ * 子标签（单选项，决定招式是否接触等）。
+ * value 为 Showdown flag 名，或哨兵值 none / noncontact（均不生成 flag）。
+ */
 object MoveFlagCatalog {
-    val FLAGS: List<Pair<String, String>> = listOf(
-        "拳类" to "punch", "咬碎类" to "bite", "斩击类" to "slicing", "声音类" to "sound",
-        "粉末类" to "powder", "波动类" to "pulse", "舞蹈招式" to "dance", "弹丸/炸弹" to "bullet",
+    val OPTIONS: List<Pair<String, String>> = listOf(
+        "无（不添加子标签）" to "none",
+        "接触" to "contact",
+        "不接触" to "noncontact",
+        "拳类" to "punch",
+        "咬碎类" to "bite",
+        "斩击类" to "slicing",
+        "声音类" to "sound",
+        "粉末类" to "powder",
+        "波动类" to "pulse",
+        "舞蹈招式" to "dance",
+        "弹丸/炸弹" to "bullet",
     )
-    fun byIndex(i: Int): Pair<String, String> { val n = FLAGS.size; return FLAGS[((i % n) + n) % n] }
 }

@@ -72,6 +72,9 @@ class Dropdown(
 
     fun renderExpanded(g: GuiGraphics, mx: Int, my: Int) {
         if (!open) return
+        // 抬升 z 到工具提示层级，确保盖在其它控件（含 EditBox 文字）之上
+        g.pose().pushPose()
+        g.pose().translate(0.0, 0.0, 400.0)
         val font = Minecraft.getInstance().font
         val visible = minOf(maxVisible, labels.size)
         val listTop = y + height
@@ -100,5 +103,6 @@ class Dropdown(
             val barY = listTop + (scroll * (visible * height - barH)) / (total - visible)
             g.fill(x + width - 2, barY, x + width, barY + barH, 0xFFCCCCCC.toInt())
         }
+        g.pose().popPose()
     }
 }

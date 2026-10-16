@@ -10,7 +10,6 @@ data class AbilitySpec(
 )
 
 object AbilitySpecFactory {
-
     fun parse(spec: String): AbilitySpec? {
         val m = LinkedHashMap<String, String>()
         for (part in spec.split('&')) {
@@ -35,12 +34,27 @@ object AbilitySpecFactory {
         return AbilitySpec(id, name, desc, effects)
     }
 
-    // 裸对象字面量（同 MoveSpec）
+    /**
+     * 生成裸对象字面量（Cobblemon 会把它嵌进对象求值）。
+     * 关键：name 必须是 ASCII（Showdown 用 toID(name) 生成 id，中文会被过滤成空 → 找不到）。
+     * 中文显示名放 shortDesc；多条同名事件处理器按触发时机合并成一个函数体。
+     */
     fun renderJs(a: AbilitySpec): String {
+        val byTrigger = LinkedHashMap<AbilityTrigger, MutableList<ParsedAbilityEffect>>()
+        for (e in a.effects) byTrigger.getOrPut(e.brick.trigger) { mutableListOf() }.add(e)
+
         val members = ArrayList<String>()
-        members.add("name: " + '"' + a.displayName + '"')
-        members.add("desc: " + '"' + a.description + '"')
-        for (e in a.effects) members.add(e.brick.render(e.params))
+        members.add("name: " + '"' + a.id + '"')
+        members.add("flags: {}")
+        members.add("rating: 3")
+        val zh = if (a.displayName.isNotEmpty() && a.displayName != a.id) a.displayName else ""
+        val fullDesc = if (a.description.isNotEmpty()) a.description else zh
+        if (zh.isNotEmpty()) members.add("shortDesc: " + '"' + zh + '"')
+        if (fullDesc.isNotEmpty()) members.add("desc: " + '"' + fullDesc + '"')
+        for ((trigger, list) in byTrigger) {
+            val body = list.joinToString(" ") { it.brick.action(it.params) }
+            members.add(trigger.handler + "(" + trigger.params + ") { " + body + " }")
+        }
         return "{ " + members.joinToString(", ") + " }"
     }
 }

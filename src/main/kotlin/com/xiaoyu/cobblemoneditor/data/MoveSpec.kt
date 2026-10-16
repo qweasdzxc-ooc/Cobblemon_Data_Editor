@@ -39,7 +39,7 @@ object MoveSpecFactory {
         val pp = m["pp"]?.toIntOrNull() ?: 10
         val priority = m["priority"]?.toIntOrNull() ?: 0
         val target = m["target"] ?: "normal"
-        val flags = m["flags"]?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() } ?: emptyList()
+        val flags = m["flags"]?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() && it != "none" && it != "noncontact" } ?: emptyList()
 
         val bricks = ArrayList<ParsedBrick>()
         m["bricks"]?.split('|')?.forEach { b ->
@@ -52,11 +52,10 @@ object MoveSpecFactory {
         return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks)
     }
 
-    // 生成裸对象字面量（Cobblemon 会把它嵌进 {"id": <这里>} 求值），不能有 exports/注释
+    /** 裸对象字面量。name 必须 ASCII；中文放 shortDesc；多条 secondary 合并成 secondaries。 */
     fun renderJs(m: MoveSpec): String {
         val fields = ArrayList<String>()
-        fields.add("num: -1")
-        fields.add("name: " + '"' + m.displayName + '"')
+        fields.add("name: " + '"' + m.id + '"')
         fields.add("type: " + '"' + cap(m.type) + '"')
         fields.add("category: " + '"' + cap(m.category) + '"')
         m.basePower?.let { fields.add("basePower: " + it) }
@@ -65,7 +64,19 @@ object MoveSpecFactory {
         fields.add("priority: " + m.priority)
         fields.add("target: " + '"' + m.target + '"')
         fields.add("flags: " + renderFlags(m.flags))
-        m.bricks.forEach { b -> fields.add(b.brick.render(b.params)) }
+        val zh = if (m.displayName.isNotEmpty() && m.displayName != m.id) m.displayName else ""
+        if (zh.isNotEmpty()) fields.add("shortDesc: " + '"' + zh + '"')
+
+        val secondaries = ArrayList<String>()
+        for (b in m.bricks) {
+            when (b.brick.kind) {
+                MoveBrickKind.FIELD -> fields.add(b.brick.render(b.params))
+                MoveBrickKind.HANDLER -> fields.add(b.brick.render(b.params))
+                MoveBrickKind.SECONDARY -> secondaries.add(b.brick.render(b.params))
+            }
+        }
+        if (secondaries.size == 1) fields.add("secondary: " + secondaries[0])
+        else if (secondaries.size > 1) fields.add("secondaries: [" + secondaries.joinToString(", ") + "]")
         return "{ " + fields.joinToString(", ") + " }"
     }
 

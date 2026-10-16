@@ -12,55 +12,88 @@ import net.minecraft.network.chat.Component
 class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
 
     private val dropdowns = mutableListOf<Dropdown>()
+    private val removeButtons = mutableListOf<Button>()
     private lateinit var idBox: EditBox
     private lateinit var nameBox: EditBox
     private lateinit var descBox: EditBox
     private lateinit var paramsBox: EditBox
-    private var effectId = "immune_type"
-    private lateinit var presetsDropdown: Dropdown
+    private lateinit var brickDropdown: Dropdown
+    private lateinit var presetDropdown: Dropdown
+    private var currentBrick = "start_boost"
+    private val effects = mutableListOf<Pair<String, String>>()
+    private val maxEffects = 6
 
     override fun init() {
-        val left = width / 2 - 130
-        val bx = left + 80
-        idBox = EditBox(this.font, bx, 40, 180, 16, Component.empty()); idBox.setMaxLength(32)
-        nameBox = EditBox(this.font, bx, 64, 180, 16, Component.empty()); nameBox.setMaxLength(64)
-        descBox = EditBox(this.font, bx, 88, 250, 16, Component.empty()); descBox.setMaxLength(200)
+        val left = width / 2 - 160
+        val bx = left + 70
+
+        idBox = EditBox(this.font, bx, 36, 250, 16, Component.empty()); idBox.setMaxLength(32)
+        nameBox = EditBox(this.font, bx, 58, 250, 16, Component.empty()); nameBox.setMaxLength(64)
+        descBox = EditBox(this.font, bx, 80, 250, 16, Component.empty()); descBox.setMaxLength(200)
         addRenderableWidget(idBox); addRenderableWidget(nameBox); addRenderableWidget(descBox)
 
-        val d1 = Dropdown(bx, 112, 150, 16, AbilityEffects.ALL.map { it.displayName }, AbilityEffects.ALL.map { it.id }) { v ->
-            effectId = v
+        brickDropdown = Dropdown(bx, 120, 150, 16, AbilityEffects.ALL.map { it.displayName }, AbilityEffects.ALL.map { it.id }, 10) { v ->
+            currentBrick = v
             paramsBox.value = AbilityEffects.byId(v)?.presets?.firstOrNull()?.first ?: ""
-            rebuildPresetsDropdown(132)
+            rebuildPresets()
         }
-        addRenderableWidget(d1); dropdowns.add(d1)
+        addRenderableWidget(brickDropdown); dropdowns.add(brickDropdown)
 
-        paramsBox = EditBox(this.font, bx, 132, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
+        paramsBox = EditBox(this.font, bx, 142, 250, 16, Component.empty()); paramsBox.setMaxLength(100)
         addRenderableWidget(paramsBox)
-        paramsBox.value = AbilityEffects.byId(effectId)?.presets?.firstOrNull()?.first ?: ""
-        rebuildPresetsDropdown(152)
+        rebuildPresets()
 
-        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 178, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, 178, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, 178, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("+ 添加效果")) { addEffect() }.bounds(bx, 164, 100, 16).build())
+
+        rebuildRemoveButtons()
+
+        val by = height - 32
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, by, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, by, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, by, 68, 20).build())
     }
 
-    private fun rebuildPresetsDropdown(y: Int) {
-        if (::presetsDropdown.isInitialized) removeWidget(presetsDropdown)
-        val b = AbilityEffects.byId(effectId)
+    private fun rebuildPresets() {
+        if (::presetDropdown.isInitialized) removeWidget(presetDropdown)
+        val b = AbilityEffects.byId(currentBrick)
         val presets = b?.presets ?: emptyList()
         if (presets.isEmpty()) return
-        presetsDropdown = Dropdown(width / 2 - 130 + 80, y, 150, 16, presets.map { it.second }, presets.map { it.first }) { v -> paramsBox.value = v }
-        addRenderableWidget(presetsDropdown); dropdowns.add(presetsDropdown)
+        presetDropdown = Dropdown(width / 2 - 160 + 160, 120, 90, 16, presets.map { it.second }, presets.map { it.first }, 8) { v -> paramsBox.value = v }
+        addRenderableWidget(presetDropdown); dropdowns.add(presetDropdown)
+    }
+
+    private fun rebuildRemoveButtons() {
+        for (b in removeButtons) removeWidget(b)
+        removeButtons.clear()
+        val left = width / 2 - 160
+        effects.forEachIndexed { i, _ ->
+            val y = 204 + i * 18
+            val btn = Button.builder(Component.literal("✕")) { removeEffect(i) }.bounds(left + 222, y, 18, 16).build()
+            addRenderableWidget(btn)
+            removeButtons.add(btn)
+        }
+    }
+
+    private fun addEffect() {
+        if (effects.size >= maxEffects) { msg("最多添加 $maxEffects 条效果"); return }
+        effects.add(currentBrick to paramsBox.value.trim())
+        rebuildRemoveButtons()
+    }
+
+    private fun removeEffect(i: Int) {
+        if (i in effects.indices) { effects.removeAt(i); rebuildRemoveButtons() }
     }
 
     private fun save() {
         val id = idBox.value.trim().lowercase()
-        if (id.isEmpty()) { msg("请填特性 id"); return }
+        if (id.isEmpty()) { msg("请填写 id（英文）"); return }
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=" + desc)
-        val pv = paramsBox.value.trim()
-        parts.add("effects=" + effectId + (if (pv.isEmpty()) "" else ":" + pv))
+        if (effects.isNotEmpty()) {
+            parts.add("effects=" + effects.joinToString("|") { (b, p) -> b + (if (p.isEmpty()) "" else ":" + p) })
+        }
+        if (parts.isEmpty()) { msg("至少填一项内容"); return }
         val spec = parts.joinToString("&")
         val player = Minecraft.getInstance().player
         if (player == null) { msg("未连接服务器"); return }
@@ -75,17 +108,27 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         return super.mouseClicked(mx, my, button)
     }
 
+    override fun mouseScrolled(mx: Double, my: Double, h: Double, v: Double): Boolean {
+        for (d in dropdowns) if (d.open) { d.handleScroll(v); return true }
+        return super.mouseScrolled(mx, my, h, v)
+    }
+
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
         g.fill(0, 0, width, height, 0xC0101010.toInt())
         super.render(g, mx, my, p)
-        val left = width / 2 - 130
-        g.drawCenteredString(this.font, this.title, width / 2, 14, 0xFFFFFF)
-        g.drawString(this.font, "id:", left, 44, 0xAAAAAA)
-        g.drawString(this.font, "名称:", left, 68, 0xAAAAAA)
-        g.drawString(this.font, "描述:", left, 92, 0xAAAAAA)
-        g.drawString(this.font, "效果:", left, 116, 0xAAAAAA)
-        g.drawString(this.font, "参数(可改):", left, 136, 0xAAAAAA)
-        g.drawString(this.font, "预设:", left, 156, 0xAAAAAA)
+        val left = width / 2 - 160
+        g.drawCenteredString(this.font, this.title, width / 2, 10, 0xFFFFFF)
+        g.drawString(this.font, "id:", left, 40, 0xAAAAAA)
+        g.drawString(this.font, "名称:", left, 62, 0xAAAAAA)
+        g.drawString(this.font, "描述:", left, 84, 0xAAAAAA)
+        g.drawString(this.font, "效果积木:", left, 124, 0xAAAAAA)
+        g.drawString(this.font, "参数(冒号分隔):", left, 146, 0xAAAAAA)
+        g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 188, 0xAAAAAA)
+        effects.forEachIndexed { i, (b, params) ->
+            val brick = AbilityEffects.byId(b)
+            val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")
+            g.drawString(this.font, label, left + 4, 206 + i * 18, 0xFFFFFF)
+        }
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }
 
