@@ -76,22 +76,29 @@ class Dropdown(
         val visible = minOf(maxVisible, labels.size)
         val listTop = y + height
         val listBottom = listTop + visible * height
-        g.fill(x, listTop, x + width, listBottom, 0xF01A1A1A.toInt())
-        g.renderOutline(x, listTop, width, visible * height, 0xFF888888.toInt())
+        // 完全不透明底，避免背后 EditBox 文字透出来造成遮挡
+        g.fill(x, listTop, x + width, listBottom, 0xFF1B1B1B.toInt())
         val end = minOf(scroll + visible, labels.size)
         for (k in scroll until end) {
             val oy = listTop + (k - scroll) * height
             val oh = mx >= x && mx <= x + width && my >= oy && my < oy + height
-            if (k == selectedIndex) g.fill(x, oy, x + width, oy + height, 0xFF2A4A6A.toInt())
-            else if (oh) g.fill(x, oy, x + width, oy + height, 0xFF3B82F6.toInt())
+            // 每一行都铺满不透明底色，防止选项间隙露出后面的文字
+            val bg = when {
+                k == selectedIndex -> 0xFF2A4A6A.toInt()
+                oh -> 0xFF3B82F6.toInt()
+                else -> 0xFF232323.toInt()
+            }
+            g.fill(x, oy, x + width, oy + height, bg)
             val color = if (k == selectedIndex) 0xFFFFD54F.toInt() else 0xFFFFFFFF.toInt()
             g.drawCenteredString(font, Component.literal(labels[k]), x + width / 2, oy + (height - 8) / 2, color)
         }
+        // 实心边框（最后画，盖在滚动条之上）
+        g.renderOutline(x, listTop, width, visible * height, 0xFFBBBBBB.toInt())
         val total = labels.size
         if (total > visible) {
             val barH = (visible * height * visible / total).coerceAtLeast(8)
             val barY = listTop + (scroll * (visible * height - barH)) / (total - visible)
-            g.fill(x + width - 2, barY, x + width, barY + barH, 0x88CCCCCC.toInt())
+            g.fill(x + width - 2, barY, x + width, barY + barH, 0xFFCCCCCC.toInt())
         }
     }
 }
