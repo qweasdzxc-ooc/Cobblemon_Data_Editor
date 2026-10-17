@@ -53,3 +53,9 @@
 - 逐项核验 MoveSpec.renderJs/AbilitySpec.renderJs 输出 vs Cobblemon 读回（Moves.kt/Abilities.kt）：ability 读回只需 id ✅；多 secondary 合并 secondaries ✅；同触发时机 ability handler 合并 ✅；accuracy:true→-1.0 ✅
 - ⚠️ 抓到真 bug：Moves.kt:77 `jsMove.get("basePower").asDouble` 无条件取值 → 编辑器生成的状态招式（无 basePower 键）会被注册表静默丢弃，文件在但游戏里永远看不到。官方状态招式都带 basePower:0 才幸免
 - 修复：MoveSpec.renderJs 统一输出 basePower（状态=0）；findings.md 记录该陷阱；构建 ✅ 部署 ✅ commit 4c49ad6
+
+## 2026-10-18 积木参数校验（双端）
+- 隐患：积木参数个数不符/数字槽位填非数字 → 服务端渲染阶段 IndexOutOfBounds 崩溃，或生成语法错误的 JS 文件
+- 修复：EffectBrick.kt 新增共享 validateBrickParams(hints, params)（个数必须等于提示数；含"概率/级数/分母/次数/倍率/等级/会心/阈值/加成"关键词的槽位必须是数字）；MoveSpecFactory/AbilitySpecFactory.parse 强制校验；两个编辑器界面添加积木时即时校验并提示示例
+- 顺带收紧：MoveSpec parse 的 accuracy/pp/priority 非数字不再静默回落默认值而是拒绝
+- 构建 ✅（5s/3s 两轮），部署 174527B，commit fdd8bbd
