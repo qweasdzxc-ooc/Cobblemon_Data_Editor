@@ -36,3 +36,9 @@
 - EditorCommands.runSet：mergeAbilities 非空时执行 官方∪运行时∪用户 合并后整体写回
 - 修复存档 weedle.json：["shielddust","h:runaway","h:huomian"]（原文件备份 weedle.json.bak-manual-20261018）
 - 版本 0.3.0→0.3.1，构建+部署+提交待完成
+
+### 构建与部署记录（v0.3.1）
+- 构建失败 2 次：①AbilityPoolMerger KDoc 内 data/<ns>/species/** 的 /** 触发 Kotlin 嵌套块注释（Unclosed comment）→ 改为单星 ②JsonArray 未 smart-cast（takeIf 后需 .asJsonArray）→ mapNotNull 未解析。第三次 ✅ BUILD SUCCESSFUL 6s
+- jar 校验：fabric.mod.json version=0.3.1，含 AbilityPoolMerger/SpeciesFactory/NewSpeciesScreen .class ✅
+- 部署：mods/[自制]CobblemonDataEditor-0.3.1.jar（170747B），0.3.0 移入 _mods_backup_20261007_234644
+- git commit df2b0ed（feat: ability pool merge semantics + fixes）

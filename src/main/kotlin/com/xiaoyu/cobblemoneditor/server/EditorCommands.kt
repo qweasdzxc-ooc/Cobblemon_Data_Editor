@@ -2,6 +2,7 @@ package com.xiaoyu.cobblemoneditor.server
 
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
+import com.cobblemon.mod.common.pokemon.Species
 import com.xiaoyu.cobblemoneditor.data.AbilityPoolMerger
 import com.xiaoyu.cobblemoneditor.data.AbilitySpecFactory
 import com.xiaoyu.cobblemoneditor.data.DatapackWriter
@@ -13,6 +14,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.level.storage.LevelResource
 
 object EditorCommands {
@@ -82,6 +84,9 @@ object EditorCommands {
     private fun packRoot(source: CommandSourceStack) =
         source.server.getWorldPath(LevelResource.ROOT).resolve("datapacks").resolve(PACK_ID)
 
+    private fun findSpecies(name: String): Species? =
+        PokemonSpecies.getByName(name) ?: PokemonSpecies.getByIdentifier(ResourceLocation(PACK_ID, name))
+
     private fun runSet(source: CommandSourceStack, species: String, spec: String): Int {
         var parsed = SpeciesPatch.parseSpec(spec)
         if (parsed == null) {
@@ -89,8 +94,8 @@ object EditorCommands {
             return 0
         }
         // abilities= 为合并模式：官方物种 JSON ∪ 运行时现有池 ∪ 用户条目（防止整体替换冲掉官方特性）
-        if (parsed.mergeAbilities != null) {
-            val speciesObj = PokemonSpecies.getByName(species)
+        if (parsed.mergeAbilities != null && parsed.replaceAbilities == null) {
+            val speciesObj = findSpecies(species)
             val official = AbilityPoolMerger.fromSpeciesJson(source.server, speciesObj?.name ?: species)
             val runtime = AbilityPoolMerger.read(speciesObj?.abilities)
             parsed = parsed.copy(
@@ -99,8 +104,8 @@ object EditorCommands {
             )
         }
         // moves= 为合并模式：与注册表中该精灵现有学习表取并集（查不到注册表则退化为仅用户条目）
-        if (parsed.mergeMoves != null) {
-            val existing = PokemonSpecies.getByName(species)?.moves
+        if (parsed.mergeMoves != null && parsed.replaceMoves == null) {
+            val existing = findSpecies(species)?.moves
             parsed = parsed.copy(replaceMoves = LearnsetMerger.merge(existing, parsed.mergeMoves!!))
         }
         val json = SpeciesPatch.buildJson(species, parsed)
