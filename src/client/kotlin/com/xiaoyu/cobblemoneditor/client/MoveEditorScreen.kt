@@ -36,15 +36,19 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     private val bricks = mutableListOf<Pair<String, String>>()
     private val maxBricks = 6
 
-    override fun init() {
-        val left = width / 2 - 160
-        val bx = left + 100
+    // 标签列（窄）在左，控件列在右
+    private val labelX get() = width / 2 - 170
+    private val fieldX get() = width / 2 - 170 + 60
 
-        idBox = EditBox(this.font, bx, 22, 110, 16, Component.empty()); idBox.setMaxLength(32)
-        nameBox = EditBox(this.font, bx, 42, 110, 16, Component.empty()); nameBox.setMaxLength(64)
-        powerBox = EditBox(this.font, bx, 62, 50, 16, Component.empty()); powerBox.setMaxLength(3)
-        accBox = EditBox(this.font, bx, 82, 50, 16, Component.empty()); accBox.setMaxLength(3)
-        ppBox = EditBox(this.font, bx, 102, 50, 16, Component.empty()); ppBox.setMaxLength(3)
+    override fun init() {
+        val left = width / 2 - 170
+        val bx = fieldX
+
+        idBox = EditBox(this.font, bx, 22, 100, 16, Component.empty()); idBox.setMaxLength(32)
+        nameBox = EditBox(this.font, bx + 108, 22, 100, 16, Component.empty()); nameBox.setMaxLength(64)
+        powerBox = EditBox(this.font, bx, 42, 40, 16, Component.empty()); powerBox.setMaxLength(3)
+        accBox = EditBox(this.font, bx + 48, 42, 40, 16, Component.empty()); accBox.setMaxLength(3)
+        ppBox = EditBox(this.font, bx + 96, 42, 40, 16, Component.empty()); ppBox.setMaxLength(3)
         addRenderableWidget(idBox); addRenderableWidget(nameBox)
         addRenderableWidget(powerBox); addRenderableWidget(accBox); addRenderableWidget(ppBox)
 
@@ -52,24 +56,24 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
             val d = Dropdown(bx, y, w, 16, labels, values, 10) { cb(it) }
             d.setSelectedByValue(cur); addRenderableWidget(d); dropdowns.add(d); return d
         }
-        dd(124, 96, TypeCatalog.TYPES.map { it.second }, TypeCatalog.TYPES.map { it.first }, type) { type = it }
-        dd(144, 96, CategoryCatalog.CATEGORIES.map { it.second }, CategoryCatalog.CATEGORIES.map { it.first }, category) { category = it }
-        dd(164, 96, PriorityCatalog.OPTIONS.map { it.first }, PriorityCatalog.OPTIONS.map { it.second.toString() }, priority) { priority = it }
-        dd(184, 96, TargetCatalog.OPTIONS.map { it.first }, TargetCatalog.OPTIONS.map { it.second }, target) { target = it }
-        dd(204, 110, MoveFlagCatalog.OPTIONS.map { it.first }, MoveFlagCatalog.OPTIONS.map { it.second }, flag) { flag = it }
+        dd(62, 90, TypeCatalog.TYPES.map { it.second }, TypeCatalog.TYPES.map { it.first }, type) { type = it }
+        dd(82, 90, CategoryCatalog.CATEGORIES.map { it.second }, CategoryCatalog.CATEGORIES.map { it.first }, category) { category = it }
+        dd(102, 90, PriorityCatalog.OPTIONS.map { it.first }, PriorityCatalog.OPTIONS.map { it.second.toString() }, priority) { priority = it }
+        dd(122, 90, TargetCatalog.OPTIONS.map { it.first }, TargetCatalog.OPTIONS.map { it.second }, target) { target = it }
+        dd(142, 90, MoveFlagCatalog.OPTIONS.map { it.first }, MoveFlagCatalog.OPTIONS.map { it.second }, flag) { flag = it }
 
-        brickDropdown = Dropdown(bx, 228, 150, 16, EffectBricks.ALL.map { it.displayName }, EffectBricks.ALL.map { it.id }, 10) { v ->
+        brickDropdown = Dropdown(bx, 166, 150, 16, EffectBricks.ALL.map { it.displayName }, EffectBricks.ALL.map { it.id }, 10) { v ->
             currentBrick = v
             paramsBox.value = EffectBricks.byId(v)?.presets?.firstOrNull()?.first ?: ""
             rebuildPresets()
         }
         addRenderableWidget(brickDropdown); dropdowns.add(brickDropdown)
 
-        paramsBox = EditBox(this.font, bx, 250, 250, 16, Component.empty()); paramsBox.setMaxLength(100)
+        paramsBox = EditBox(this.font, bx, 188, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
         addRenderableWidget(paramsBox)
         rebuildPresets()
 
-        addRenderableWidget(Button.builder(Component.literal("+ 添加效果")) { addBrick() }.bounds(bx, 272, 100, 16).build())
+        addRenderableWidget(Button.builder(Component.literal("+ 添加")) { addBrick() }.bounds(bx + 158, 188, 54, 16).build())
         rebuildRemoveButtons()
 
         val by = height - 32
@@ -83,17 +87,17 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         val b = EffectBricks.byId(currentBrick)
         val presets = b?.presets ?: emptyList()
         if (presets.isEmpty()) return
-        presetDropdown = Dropdown(width / 2 - 160 + 160, 228, 90, 16, presets.map { it.second }, presets.map { it.first }, 8) { v -> paramsBox.value = v }
+        presetDropdown = Dropdown(fieldX + 158, 166, 102, 16, presets.map { it.second }, presets.map { it.first }, 8) { v -> paramsBox.value = v }
         addRenderableWidget(presetDropdown); dropdowns.add(presetDropdown)
     }
 
     private fun rebuildRemoveButtons() {
         for (b in removeButtons) removeWidget(b)
         removeButtons.clear()
-        val left = width / 2 - 160
+        val left = width / 2 - 170
         bricks.forEachIndexed { i, _ ->
-            val y = 312 + i * 18
-            val btn = Button.builder(Component.literal("✕")) { removeBrick(i) }.bounds(left + 222, y, 18, 16).build()
+            val y = 232 + i * 18
+            val btn = Button.builder(Component.literal("✕")) { removeBrick(i) }.bounds(left + 250, y, 18, 16).build()
             addRenderableWidget(btn)
             removeButtons.add(btn)
         }
@@ -147,25 +151,25 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
         g.fill(0, 0, width, height, 0xC0101010.toInt())
         super.render(g, mx, my, p)
-        val left = width / 2 - 160
+        val left = width / 2 - 170
         g.drawCenteredString(this.font, this.title, width / 2, 6, 0xFFFFFF)
         g.drawString(this.font, "id:", left, 26, 0xAAAAAA)
-        g.drawString(this.font, "名称:", left, 46, 0xAAAAAA)
-        g.drawString(this.font, "威力:", left, 66, 0xAAAAAA)
-        g.drawString(this.font, "命中:", left + 60, 66, 0xAAAAAA)
-        g.drawString(this.font, "pp:", left + 120, 66, 0xAAAAAA)
-        g.drawString(this.font, "属性:", left, 128, 0xAAAAAA)
-        g.drawString(this.font, "分类:", left, 148, 0xAAAAAA)
-        g.drawString(this.font, "优先度:", left, 168, 0xAAAAAA)
-        g.drawString(this.font, "目标:", left, 188, 0xAAAAAA)
-        g.drawString(this.font, "子标签:", left, 208, 0xAAAAAA)
-        g.drawString(this.font, "效果积木:", left, 232, 0xAAAAAA)
-        g.drawString(this.font, "参数(冒号分隔):", left, 254, 0xAAAAAA)
-        g.drawString(this.font, "已添加(最多" + maxBricks + "条):", left, 296, 0xAAAAAA)
+        g.drawString(this.font, "名称:", left + 112, 26, 0xAAAAAA)
+        g.drawString(this.font, "威力:", left, 46, 0xAAAAAA)
+        g.drawString(this.font, "命中:", left + 50, 46, 0xAAAAAA)
+        g.drawString(this.font, "pp:", left + 98, 46, 0xAAAAAA)
+        g.drawString(this.font, "属性:", left, 66, 0xAAAAAA)
+        g.drawString(this.font, "分类:", left, 86, 0xAAAAAA)
+        g.drawString(this.font, "优先:", left, 106, 0xAAAAAA)
+        g.drawString(this.font, "目标:", left, 126, 0xAAAAAA)
+        g.drawString(this.font, "子标签:", left, 146, 0xAAAAAA)
+        g.drawString(this.font, "积木:", left, 170, 0xAAAAAA)
+        g.drawString(this.font, "参数:", left, 192, 0xAAAAAA)
+        g.drawString(this.font, "已添加(最多" + maxBricks + "条):", left, 216, 0xAAAAAA)
         bricks.forEachIndexed { i, (b, params) ->
             val brick = EffectBricks.byId(b)
             val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")
-            g.drawString(this.font, label, left + 4, 314 + i * 18, 0xFFFFFF)
+            g.drawString(this.font, label, left + 4, 234 + i * 18, 0xFFFFFF)
         }
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }

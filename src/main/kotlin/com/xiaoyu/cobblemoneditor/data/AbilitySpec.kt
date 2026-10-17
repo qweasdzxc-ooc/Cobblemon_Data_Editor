@@ -47,8 +47,8 @@ object AbilitySpecFactory {
         members.add("name: " + '"' + a.id + '"')
         members.add("flags: {}")
         members.add("rating: 3")
-        val zh = if (a.displayName.isNotEmpty() && a.displayName != a.id) a.displayName else ""
-        val fullDesc = if (a.description.isNotEmpty()) a.description else zh
+        val zh = esc(if (a.displayName.isNotEmpty() && a.displayName != a.id) a.displayName else "")
+        val fullDesc = esc(if (a.description.isNotEmpty()) a.description else a.displayName)
         if (zh.isNotEmpty()) members.add("shortDesc: " + '"' + zh + '"')
         if (fullDesc.isNotEmpty()) members.add("desc: " + '"' + fullDesc + '"')
         for ((trigger, list) in byTrigger) {
@@ -57,4 +57,7 @@ object AbilitySpecFactory {
         }
         return "{ " + members.joinToString(", ") + " }"
     }
+
+    private fun esc(s: String): String =
+        s.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"").replace("\n", " ").replace("\r", " ")
 }

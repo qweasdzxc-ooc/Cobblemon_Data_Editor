@@ -23,27 +23,31 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     private val effects = mutableListOf<Pair<String, String>>()
     private val maxEffects = 6
 
+    // 标签列（窄）在左，控件列在右，互不重叠
+    private val labelX get() = width / 2 - 160
+    private val fieldX get() = width / 2 - 160 + 56
+
     override fun init() {
         val left = width / 2 - 160
-        val bx = left + 70
+        val bx = fieldX
 
-        idBox = EditBox(this.font, bx, 36, 250, 16, Component.empty()); idBox.setMaxLength(32)
-        nameBox = EditBox(this.font, bx, 58, 250, 16, Component.empty()); nameBox.setMaxLength(64)
-        descBox = EditBox(this.font, bx, 80, 250, 16, Component.empty()); descBox.setMaxLength(200)
+        idBox = EditBox(this.font, bx, 36, 260, 16, Component.empty()); idBox.setMaxLength(32)
+        nameBox = EditBox(this.font, bx, 58, 260, 16, Component.empty()); nameBox.setMaxLength(64)
+        descBox = EditBox(this.font, bx, 80, 260, 16, Component.empty()); descBox.setMaxLength(200)
         addRenderableWidget(idBox); addRenderableWidget(nameBox); addRenderableWidget(descBox)
 
-        brickDropdown = Dropdown(bx, 120, 150, 16, AbilityEffects.ALL.map { it.displayName }, AbilityEffects.ALL.map { it.id }, 10) { v ->
+        brickDropdown = Dropdown(bx, 118, 150, 16, AbilityEffects.ALL.map { it.displayName }, AbilityEffects.ALL.map { it.id }, 10) { v ->
             currentBrick = v
             paramsBox.value = AbilityEffects.byId(v)?.presets?.firstOrNull()?.first ?: ""
             rebuildPresets()
         }
         addRenderableWidget(brickDropdown); dropdowns.add(brickDropdown)
 
-        paramsBox = EditBox(this.font, bx, 142, 250, 16, Component.empty()); paramsBox.setMaxLength(100)
+        paramsBox = EditBox(this.font, bx, 140, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
         addRenderableWidget(paramsBox)
         rebuildPresets()
 
-        addRenderableWidget(Button.builder(Component.literal("+ 添加效果")) { addEffect() }.bounds(bx, 164, 100, 16).build())
+        addRenderableWidget(Button.builder(Component.literal("+ 添加")) { addEffect() }.bounds(bx + 160, 140, 54, 16).build())
 
         rebuildRemoveButtons()
 
@@ -58,7 +62,7 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         val b = AbilityEffects.byId(currentBrick)
         val presets = b?.presets ?: emptyList()
         if (presets.isEmpty()) return
-        presetDropdown = Dropdown(width / 2 - 160 + 160, 120, 90, 16, presets.map { it.second }, presets.map { it.first }, 8) { v -> paramsBox.value = v }
+        presetDropdown = Dropdown(fieldX + 158, 118, 102, 16, presets.map { it.second }, presets.map { it.first }, 8) { v -> paramsBox.value = v }
         addRenderableWidget(presetDropdown); dropdowns.add(presetDropdown)
     }
 
@@ -67,8 +71,8 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         removeButtons.clear()
         val left = width / 2 - 160
         effects.forEachIndexed { i, _ ->
-            val y = 204 + i * 18
-            val btn = Button.builder(Component.literal("✕")) { removeEffect(i) }.bounds(left + 222, y, 18, 16).build()
+            val y = 184 + i * 18
+            val btn = Button.builder(Component.literal("✕")) { removeEffect(i) }.bounds(left + 250, y, 18, 16).build()
             addRenderableWidget(btn)
             removeButtons.add(btn)
         }
@@ -121,13 +125,13 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         g.drawString(this.font, "id:", left, 40, 0xAAAAAA)
         g.drawString(this.font, "名称:", left, 62, 0xAAAAAA)
         g.drawString(this.font, "描述:", left, 84, 0xAAAAAA)
-        g.drawString(this.font, "效果积木:", left, 124, 0xAAAAAA)
-        g.drawString(this.font, "参数(冒号分隔):", left, 146, 0xAAAAAA)
-        g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 188, 0xAAAAAA)
+        g.drawString(this.font, "效果:", left, 122, 0xAAAAAA)
+        g.drawString(this.font, "参数:", left, 144, 0xAAAAAA)
+        g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 168, 0xAAAAAA)
         effects.forEachIndexed { i, (b, params) ->
             val brick = AbilityEffects.byId(b)
             val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")
-            g.drawString(this.font, label, left + 4, 206 + i * 18, 0xFFFFFF)
+            g.drawString(this.font, label, left + 4, 186 + i * 18, 0xFFFFFF)
         }
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }

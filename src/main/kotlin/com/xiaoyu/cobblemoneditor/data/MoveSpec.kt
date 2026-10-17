@@ -64,7 +64,7 @@ object MoveSpecFactory {
         fields.add("priority: " + m.priority)
         fields.add("target: " + '"' + m.target + '"')
         fields.add("flags: " + renderFlags(m.flags))
-        val zh = if (m.displayName.isNotEmpty() && m.displayName != m.id) m.displayName else ""
+        val zh = esc(if (m.displayName.isNotEmpty() && m.displayName != m.id) m.displayName else "")
         if (zh.isNotEmpty()) fields.add("shortDesc: " + '"' + zh + '"')
 
         val secondaries = ArrayList<String>()
@@ -84,4 +84,7 @@ object MoveSpecFactory {
         if (flags.isEmpty()) "{}" else "{ " + flags.joinToString(", ") { it + ": 1" } + " }"
 
     private fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
+
+    private fun esc(s: String): String =
+        s.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"").replace("\n", " ").replace("\r", " ")
 }

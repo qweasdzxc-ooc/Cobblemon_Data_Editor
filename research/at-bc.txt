@@ -1,0 +1,246 @@
+﻿Compiled from "AbilityTemplate.java"
+public final class com.cobblemon.mod.common.api.abilities.AbilityTemplate {
+  public static final com.cobblemon.mod.common.api.abilities.AbilityTemplate$Companion Companion;
+
+  private final java.lang.String name;
+
+  private kotlin.jvm.functions.Function3<? super com.cobblemon.mod.common.api.abilities.AbilityTemplate, ? super java.lang.Boolean, ? super com.cobblemon.mod.common.api.Priority, ? extends com.cobblemon.mod.common.api.abilities.Ability> builder;
+
+  private final java.lang.String displayName;
+
+  private final java.lang.String description;
+
+  private static final com.mojang.serialization.Codec<com.cobblemon.mod.common.api.abilities.AbilityTemplate> CODEC;
+
+  public com.cobblemon.mod.common.api.abilities.AbilityTemplate(java.lang.String, kotlin.jvm.functions.Function3<? super com.cobblemon.mod.common.api.abilities.AbilityTemplate, ? super java.lang.Boolean, ? super com.cobblemon.mod.common.api.Priority, ? extends com.cobblemon.mod.common.api.abilities.Ability>, java.lang.String, java.lang.String);
+    Code:
+         0: aload_1
+         1: ldc           #64                 // String name
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_2
+         7: ldc           #71                 // String builder
+         9: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+        12: aload_3
+        13: ldc           #72                 // String displayName
+        15: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+        18: aload         4
+        20: ldc           #73                 // String description
+        22: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+        25: aload_0
+        26: invokespecial #76                 // Method java/lang/Object."<init>":()V
+        29: aload_0
+        30: aload_1
+        31: putfield      #78                 // Field name:Ljava/lang/String;
+        34: aload_0
+        35: aload_2
+        36: putfield      #80                 // Field builder:Lkotlin/jvm/functions/Function3;
+        39: aload_0
+        40: aload_3
+        41: putfield      #82                 // Field displayName:Ljava/lang/String;
+        44: aload_0
+        45: aload         4
+        47: putfield      #84                 // Field description:Ljava/lang/String;
+        50: return
+
+  public com.cobblemon.mod.common.api.abilities.AbilityTemplate(java.lang.String, kotlin.jvm.functions.Function3, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+    Code:
+         0: iload         5
+         2: iconst_1
+         3: iand
+         4: ifeq          10
+         7: ldc           #87                 // String
+         9: astore_1
+        10: iload         5
+        12: iconst_2
+        13: iand
+        14: ifeq          23
+        17: invokedynamic #106,  0            // InvokeDynamic #0:invoke:()Lkotlin/jvm/functions/Function3;
+        22: astore_2
+        23: iload         5
+        25: iconst_4
+        26: iand
+        27: ifeq          37
+        30: aload_1
+        31: invokedynamic #118,  0            // InvokeDynamic #1:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+        36: astore_3
+        37: iload         5
+        39: bipush        8
+        41: iand
+        42: ifeq          53
+        45: aload_1
+        46: invokedynamic #121,  0            // InvokeDynamic #2:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+        51: astore        4
+        53: aload_0
+        54: aload_1
+        55: aload_2
+        56: aload_3
+        57: aload         4
+        59: invokespecial #123                // Method "<init>":(Ljava/lang/String;Lkotlin/jvm/functions/Function3;Ljava/lang/String;Ljava/lang/String;)V
+        62: return
+
+  public final java.lang.String getName();
+    Code:
+         0: aload_0
+         1: getfield      #78                 // Field name:Ljava/lang/String;
+         4: areturn
+
+  public final kotlin.jvm.functions.Function3<com.cobblemon.mod.common.api.abilities.AbilityTemplate, java.lang.Boolean, com.cobblemon.mod.common.api.Priority, com.cobblemon.mod.common.api.abilities.Ability> getBuilder();
+    Code:
+         0: aload_0
+         1: getfield      #80                 // Field builder:Lkotlin/jvm/functions/Function3;
+         4: areturn
+
+  public final void setBuilder(kotlin.jvm.functions.Function3<? super com.cobblemon.mod.common.api.abilities.AbilityTemplate, ? super java.lang.Boolean, ? super com.cobblemon.mod.common.api.Priority, ? extends com.cobblemon.mod.common.api.abilities.Ability>);
+    Code:
+         0: aload_1
+         1: ldc           #127                // String <set-?>
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_0
+         7: aload_1
+         8: putfield      #80                 // Field builder:Lkotlin/jvm/functions/Function3;
+        11: return
+
+  public final java.lang.String getDisplayName();
+    Code:
+         0: aload_0
+         1: getfield      #82                 // Field displayName:Ljava/lang/String;
+         4: areturn
+
+  public final java.lang.String getDescription();
+    Code:
+         0: aload_0
+         1: getfield      #84                 // Field description:Ljava/lang/String;
+         4: areturn
+
+  public final com.cobblemon.mod.common.api.abilities.Ability create(boolean, com.cobblemon.mod.common.api.Priority);
+    Code:
+         0: aload_2
+         1: ldc           #128                // String priority
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_0
+         7: getfield      #80                 // Field builder:Lkotlin/jvm/functions/Function3;
+        10: aload_0
+        11: iload_1
+        12: invokestatic  #134                // Method java/lang/Boolean.valueOf:(Z)Ljava/lang/Boolean;
+        15: aload_2
+        16: invokeinterface #138,  4          // InterfaceMethod kotlin/jvm/functions/Function3.invoke:(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+        21: checkcast     #140                // class com/cobblemon/mod/common/api/abilities/Ability
+        24: areturn
+
+  public static com.cobblemon.mod.common.api.abilities.Ability create$default(com.cobblemon.mod.common.api.abilities.AbilityTemplate, boolean, com.cobblemon.mod.common.api.Priority, int, java.lang.Object);
+    Code:
+         0: iload_3
+         1: iconst_1
+         2: iand
+         3: ifeq          8
+         6: iconst_0
+         7: istore_1
+         8: iload_3
+         9: iconst_2
+        10: iand
+        11: ifeq          18
+        14: getstatic     #148                // Field com/cobblemon/mod/common/api/Priority.LOWEST:Lcom/cobblemon/mod/common/api/Priority;
+        17: astore_2
+        18: aload_0
+        19: iload_1
+        20: aload_2
+        21: invokevirtual #150                // Method create:(ZLcom/cobblemon/mod/common/api/Priority;)Lcom/cobblemon/mod/common/api/abilities/Ability;
+        24: areturn
+
+  public final com.cobblemon.mod.common.api.abilities.Ability create(net.minecraft.class_2487);
+    Code:
+         0: aload_1
+         1: ldc           #151                // String nbt
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_0
+         7: iconst_0
+         8: aconst_null
+         9: iconst_3
+        10: aconst_null
+        11: invokestatic  #153                // Method create$default:(Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate;ZLcom/cobblemon/mod/common/api/Priority;ILjava/lang/Object;)Lcom/cobblemon/mod/common/api/abilities/Ability;
+        14: aload_1
+        15: invokevirtual #156                // Method com/cobblemon/mod/common/api/abilities/Ability.loadFromNBT:(Lnet/minecraft/class_2487;)Lcom/cobblemon/mod/common/api/abilities/Ability;
+        18: areturn
+
+  public final com.cobblemon.mod.common.api.abilities.Ability create(com.google.gson.JsonObject);
+    Code:
+         0: aload_1
+         1: ldc           #157                // String json
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_0
+         7: iconst_0
+         8: aconst_null
+         9: iconst_3
+        10: aconst_null
+        11: invokestatic  #153                // Method create$default:(Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate;ZLcom/cobblemon/mod/common/api/Priority;ILjava/lang/Object;)Lcom/cobblemon/mod/common/api/abilities/Ability;
+        14: aload_1
+        15: invokevirtual #160                // Method com/cobblemon/mod/common/api/abilities/Ability.loadFromJSON:(Lcom/google/gson/JsonObject;)Lcom/cobblemon/mod/common/api/abilities/Ability;
+        18: areturn
+
+  private static final com.cobblemon.mod.common.api.abilities.Ability _init_$lambda$0(com.cobblemon.mod.common.api.abilities.AbilityTemplate, boolean, com.cobblemon.mod.common.api.Priority);
+    Code:
+         0: aload_0
+         1: ldc           #162                // String template
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_2
+         7: ldc           #128                // String priority
+         9: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+        12: new           #140                // class com/cobblemon/mod/common/api/abilities/Ability
+        15: dup
+        16: aload_0
+        17: iload_1
+        18: aload_2
+        19: invokespecial #165                // Method com/cobblemon/mod/common/api/abilities/Ability."<init>":(Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate;ZLcom/cobblemon/mod/common/api/Priority;)V
+        22: areturn
+
+  private static final java.lang.String CODEC$lambda$0(java.lang.String);
+    Code:
+         0: aload_0
+         1: ldc           #168                // String id
+         3: invokestatic  #70                 // Method kotlin/jvm/internal/Intrinsics.checkNotNullParameter:(Ljava/lang/Object;Ljava/lang/String;)V
+         6: aload_0
+         7: invokedynamic #171,  0            // InvokeDynamic #3:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+        12: areturn
+
+  public com.cobblemon.mod.common.api.abilities.AbilityTemplate();
+    Code:
+         0: aload_0
+         1: aconst_null
+         2: aconst_null
+         3: aconst_null
+         4: aconst_null
+         5: bipush        15
+         7: aconst_null
+         8: invokespecial #173                // Method "<init>":(Ljava/lang/String;Lkotlin/jvm/functions/Function3;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+        11: return
+
+  public static final com.mojang.serialization.Codec<com.cobblemon.mod.common.api.abilities.AbilityTemplate> getCODEC();
+    Code:
+         0: getstatic     #178                // Field Companion:Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion;
+         3: invokevirtual #180                // Method com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion.getCODEC:()Lcom/mojang/serialization/Codec;
+         6: areturn
+
+  public static final com.mojang.serialization.Codec access$getCODEC$cp();
+    Code:
+         0: getstatic     #183                // Field CODEC:Lcom/mojang/serialization/Codec;
+         3: areturn
+
+  static {};
+    Code:
+         0: new           #56                 // class com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion
+         3: dup
+         4: aconst_null
+         5: invokespecial #187                // Method com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion."<init>":(Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+         8: putstatic     #178                // Field Companion:Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion;
+        11: new           #52                 // class com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion$CODEC$1
+        14: dup
+        15: getstatic     #193                // Field com/cobblemon/mod/common/api/abilities/Abilities.INSTANCE:Lcom/cobblemon/mod/common/api/abilities/Abilities;
+        18: invokespecial #196                // Method com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion$CODEC$1."<init>":(Ljava/lang/Object;)V
+        21: checkcast     #198                // class kotlin/jvm/functions/Function1
+        24: getstatic     #201                // Field com/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion$CODEC$2.INSTANCE:Lcom/cobblemon/mod/common/api/abilities/AbilityTemplate$Companion$CODEC$2;
+        27: checkcast     #198                // class kotlin/jvm/functions/Function1
+        30: invokedynamic #210,  0            // InvokeDynamic #4:invoke:()Lkotlin/jvm/functions/Function1;
+        35: invokestatic  #216                // Method com/cobblemon/mod/common/util/codec/CodecUtils.createByStringCodec:(Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lcom/mojang/serialization/Codec;
+        38: putstatic     #183                // Field CODEC:Lcom/mojang/serialization/Codec;
+        41: return
+}

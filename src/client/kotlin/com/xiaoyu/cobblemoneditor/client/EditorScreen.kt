@@ -35,38 +35,50 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         "special_attack" to "特攻", "special_defence" to "特防", "speed" to "速度",
     )
 
-    override fun init() {
-        val left = width / 2 - 150
+    // 布局常量：标签列在左，控件列在右，互不重叠
+    private val labelX get() = width / 2 - 160
+    private val fieldX get() = width / 2 - 160 + 72
 
-        speciesSearchBox = EditBox(this.font, left + 150, 18, 120, 16, Component.empty())
+    override fun init() {
+        val left = width / 2 - 160
+
+        // 搜索行：搜索框 + 精灵下拉
+        speciesSearchBox = EditBox(this.font, fieldX, 16, 100, 16, Component.empty())
         speciesSearchBox.setMaxLength(64)
         addRenderableWidget(speciesSearchBox)
         if (speciesList.isNotEmpty()) speciesId = speciesList[0].first
         rebuildSpeciesDropdown()
 
+        // 六维：2 列 × 3 行
         var i = 0
         for ((k, _) in stats) {
             val col = i % 2; val row = i / 2
-            val box = EditBox(this.font, left + 60 + col * 150, 38 + row * 18, 50, 14, Component.empty())
+            val bx = fieldX + col * 150
+            val by = 56 + row * 18
+            val box = EditBox(this.font, bx, by, 46, 14, Component.empty())
             box.setMaxLength(3); addRenderableWidget(box); statBoxes[k] = box
             i++
         }
 
+        // 属性
         val typeLabels = listOf("不添加") + TypeCatalog.TYPES.map { it.second }
         val typeValues = listOf("") + TypeCatalog.TYPES.map { it.first }
-        val d1 = Dropdown(left, 96, 90, 14, typeLabels, typeValues) { type1 = it }
+        val d1 = Dropdown(fieldX, 112, 92, 14, typeLabels, typeValues, 10) { type1 = it }
         addRenderableWidget(d1); dropdowns.add(d1)
-        val d2 = Dropdown(left + 100, 96, 90, 14, typeLabels, typeValues) { type2 = it }
+        val d2 = Dropdown(fieldX + 110, 112, 92, 14, typeLabels, typeValues, 10) { type2 = it }
         addRenderableWidget(d2); dropdowns.add(d2)
 
-        abilitySearchBox = EditBox(this.font, left, 114, 230, 14, Component.empty())
+        // 特性
+        abilitySearchBox = EditBox(this.font, fieldX, 132, 190, 14, Component.empty())
         abilitySearchBox.setMaxLength(64)
         addRenderableWidget(abilitySearchBox)
         rebuildAbilityDropdowns()
 
-        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, 168, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, 168, 68, 20).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, 168, 68, 20).build())
+        // 按钮
+        val by = height - 28
+        addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, by, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("返回")) { Minecraft.getInstance().setScreen(EditorHubScreen()) }.bounds(left + 76, by, 68, 20).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(left + 152, by, 68, 20).build())
     }
 
     private fun filteredSpecies(): List<Triple<String, String, String>> {
@@ -80,7 +92,7 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         val f = filteredSpecies()
         if (f.isEmpty()) return
         if (f.none { it.first == speciesId }) speciesId = f[0].first
-        speciesDropdown = Dropdown(width / 2 - 150, 18, 140, 16, f.map { it.third }, f.map { it.first }, 10) { speciesId = it }
+        speciesDropdown = Dropdown(fieldX + 110, 16, 100, 16, f.map { it.third }, f.map { it.first }, 10) { speciesId = it }
         speciesDropdown.setSelectedByValue(speciesId)
         addRenderableWidget(speciesDropdown); dropdowns.add(speciesDropdown)
     }
@@ -101,14 +113,13 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         if (ability1.isNotEmpty() && f.none { it.first == ability1 }) ability1 = ""
         if (ability2.isNotEmpty() && f.none { it.first == ability2 }) ability2 = ""
         if (hiddenAbility.isNotEmpty() && f.none { it.first == hiddenAbility }) hiddenAbility = ""
-        val left = width / 2 - 150
-        abilityDropdown1 = Dropdown(left, 132, 110, 14, labels, values, 10) { ability1 = it }
+        abilityDropdown1 = Dropdown(fieldX, 152, 110, 14, labels, values, 10) { ability1 = it }
         abilityDropdown1.setSelectedByValue(ability1)
         addRenderableWidget(abilityDropdown1); dropdowns.add(abilityDropdown1)
-        abilityDropdown2 = Dropdown(left + 120, 132, 110, 14, labels, values, 10) { ability2 = it }
+        abilityDropdown2 = Dropdown(fieldX + 120, 152, 110, 14, labels, values, 10) { ability2 = it }
         abilityDropdown2.setSelectedByValue(ability2)
         addRenderableWidget(abilityDropdown2); dropdowns.add(abilityDropdown2)
-        abilityDropdown3 = Dropdown(left, 150, 230, 14, labels, values, 10) { hiddenAbility = it }
+        abilityDropdown3 = Dropdown(fieldX, 170, 190, 14, labels, values, 10) { hiddenAbility = it }
         abilityDropdown3.setSelectedByValue(hiddenAbility)
         addRenderableWidget(abilityDropdown3); dropdowns.add(abilityDropdown3)
     }
@@ -158,22 +169,22 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
         g.fill(0, 0, width, height, 0xC0101010.toInt())
         super.render(g, mx, my, p)
-        val left = width / 2 - 150
+        val left = width / 2 - 160
         g.drawCenteredString(this.font, this.title, width / 2, 4, 0xFFFFFF)
-        g.drawString(this.font, "精灵搜索:", left, 22, 0xAAAAAA)
+        g.drawString(this.font, "精灵:", left, 20, 0xAAAAAA)
         var i = 0
         for ((_, label) in stats) {
             val col = i % 2; val row = i / 2
-            g.drawString(this.font, label + ":", left + col * 150, 42 + row * 18, 0xAAAAAA)
+            g.drawString(this.font, label + ":", left + col * 150, 60 + row * 18, 0xAAAAAA)
             i++
         }
-        g.drawString(this.font, "属性1:", left, 100, 0xAAAAAA)
-        g.drawString(this.font, "属性2:", left + 100, 100, 0xAAAAAA)
-        g.drawString(this.font, "特性搜索:", left, 118, 0xAAAAAA)
-        g.drawString(this.font, "特性1:", left, 136, 0xAAAAAA)
-        g.drawString(this.font, "特性2:", left + 120, 136, 0xAAAAAA)
-        g.drawString(this.font, "隐藏特性:", left, 154, 0xAAAAAA)
-        g.drawString(this.font, "留空=不改；保存后重进世界生效", left, 190, 0x888888)
+        g.drawString(this.font, "属性1:", left, 116, 0xAAAAAA)
+        g.drawString(this.font, "属性2:", left + 110, 116, 0xAAAAAA)
+        g.drawString(this.font, "特性搜索:", left, 136, 0xAAAAAA)
+        g.drawString(this.font, "特性1:", left, 156, 0xAAAAAA)
+        g.drawString(this.font, "特性2:", left + 120, 156, 0xAAAAAA)
+        g.drawString(this.font, "隐藏特性:", left, 174, 0xAAAAAA)
+        g.drawString(this.font, "留空=不改；保存后重进世界生效", left, 200, 0x888888)
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }
 
