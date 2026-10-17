@@ -18,4 +18,21 @@
 ## 2026-10-18 Phase 6 版本与部署
 - gradle.properties mod_version 0.2.10 → 0.3.0，构建 ✅ cobblemoneditor-0.3.0.jar（165683B）
 - 部署到整合包 mods：新装 [自制]CobblemonDataEditor-0.3.0.jar；旧 [自制]CobblemonDataEditor-0.2.10.jar 移入版本目录 _mods_backup_20261007_234644 备份（可回滚）
-- 待办：git 提交 → 向用户汇报 0.3.0 新功能并收集 Phase 7 游玩问题清单
+- 验证：解包部署 jar 确认含 NewSpeciesScreen/SpeciesFactory/LearnsetMerger/ConflictChecker 类，fabric.mod.json version=0.3.0 ✅
+- git 提交 9043ec2（17 files, +1033/-22）
+- 待办：向用户汇报 0.3.0 新功能并收集 Phase 7 游玩问题清单
+
+## 2026-10-18 实地数据排查（Phase 7 预研）
+- 查 latest.log：用户最后一次游玩 0.2.9（10/17 21:54-22:42），全程无 cobblemoneditor 报错；会话中保存了 huomian 特性与 weedle 补丁
+- 审计存档数据包 saves\新的开始\datapacks\cobblemoneditor：pikachu.json/weedle.json/huomian.js/mianhuo.js 均有效
+- 修复 fengren.js（旧版 0.2.x 产出的废文件）：name "风刃"→"fengren"（ASCII，中文名会致 Showdown toID 为空→招式失效）、去掉 num:-1（注册表自动补号）、去重 priority 键；原文件备份为 fengren.js.bak-manual-20261018
+- 发现待确认项：weedle.json 的 abilities 仅 ["h:huomian"]（species_additions 整体替换语义→weedle 特性池只剩隐藏特性、无常驻特性），需用户实测反馈是否异常
+- 待办：等用户 Phase 7 问题清单
+
+## 2026-10-18 特性合并语义修复（v0.3.1）
+- 调研：javap 证实 AbilityPool extends PrioritizedList<PotentialAbility>（Iterable）；HiddenAbility 构造器字节码证实隐藏特性 = Priority.LOW；官方物种数据在 Cobblemon jar 内 data/cobblemon/species/generationN/<name>.json（资源管理器可读 cobblemon:species/**）
+- 新增 src/main/kotlin/com/xiaoyu/cobblemoneditor/data/AbilityPoolMerger.kt：read(pool)（LOW→h: 前缀）、fromSpeciesJson(server,name)（listResources("species") 按 name 大小写不敏感匹配读官方 abilities）、merge(official,runtime,user)（三方并集去重）
+- SpeciesPatch.kt：abilities→mergeAbilities（合并语义）、新增 abilitiesReplace（整体替换逃生门）
+- EditorCommands.runSet：mergeAbilities 非空时执行 官方∪运行时∪用户 合并后整体写回
+- 修复存档 weedle.json：["shielddust","h:runaway","h:huomian"]（原文件备份 weedle.json.bak-manual-20261018）
+- 版本 0.3.0→0.3.1，构建+部署+提交待完成

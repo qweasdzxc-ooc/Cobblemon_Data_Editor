@@ -2,6 +2,7 @@ package com.xiaoyu.cobblemoneditor.server
 
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
+import com.xiaoyu.cobblemoneditor.data.AbilityPoolMerger
 import com.xiaoyu.cobblemoneditor.data.AbilitySpecFactory
 import com.xiaoyu.cobblemoneditor.data.DatapackWriter
 import com.xiaoyu.cobblemoneditor.data.LearnsetMerger
@@ -84,8 +85,18 @@ object EditorCommands {
     private fun runSet(source: CommandSourceStack, species: String, spec: String): Int {
         var parsed = SpeciesPatch.parseSpec(spec)
         if (parsed == null) {
-            source.sendFailure(Component.literal("参数无效。用法: /cobbleeditor set <species> <key=value,...>（键: hp/atk/def/spa/spd/spe/primaryType/secondaryType/abilities/moves/movesReplace）"))
+            source.sendFailure(Component.literal("参数无效。用法: /cobbleeditor set <species> <key=value,...>（键: hp/atk/def/spa/spd/spe/primaryType/secondaryType/abilities/abilitiesReplace/moves/movesReplace）"))
             return 0
+        }
+        // abilities= 为合并模式：官方物种 JSON ∪ 运行时现有池 ∪ 用户条目（防止整体替换冲掉官方特性）
+        if (parsed.mergeAbilities != null) {
+            val speciesObj = PokemonSpecies.getByName(species)
+            val official = AbilityPoolMerger.fromSpeciesJson(source.server, speciesObj?.name ?: species)
+            val runtime = AbilityPoolMerger.read(speciesObj?.abilities)
+            parsed = parsed.copy(
+                mergeAbilities = null,
+                replaceAbilities = AbilityPoolMerger.merge(official, runtime, parsed.mergeAbilities!!)
+            )
         }
         // moves= 为合并模式：与注册表中该精灵现有学习表取并集（查不到注册表则退化为仅用户条目）
         if (parsed.mergeMoves != null) {

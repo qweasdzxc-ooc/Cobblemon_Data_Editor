@@ -8,7 +8,8 @@ package com.xiaoyu.cobblemoneditor.data
  * - 种族值键：hp/attack/defence/special_attack/special_defence/speed（0..255）
  * - 属性键：primaryType（别名 type1）、secondaryType（别名 type2）；值用类型 id（小写），
  *           "none"/"null"/"" 表示该属性为空（无第二属性）
- * - 特性键：abilities；值用 | 分隔的列表，例如 static|h:lightningrod（h: 前缀=隐藏特性）
+ * - 特性键：abilities（与官方/现有特性池取并集合并，h: 前缀=隐藏特性）、
+ *   abilitiesReplace（整体替换，只写给出的列表）；值用 | 分隔，例如 static|h:lightningrod
  * - 学习表键：moves（与现有学习表合并）、movesReplace（整体替换）；
  *   值用 | 分隔的 "<method>:<moveId>" 列表，例如 1:tackle|5:growl|egg:leechseed|tm:thunderbolt
  *   （method 可为等级 1..100、egg、tm、tutor、legacy、special）
@@ -34,7 +35,8 @@ object SpeciesPatch {
         val primaryType: String?,
         val secondaryTypeSpecified: Boolean,
         val secondaryType: String?,
-        val abilities: List<String>?,
+        val mergeAbilities: List<String>?,
+        val replaceAbilities: List<String>?,
         val mergeMoves: List<String>?,
         val replaceMoves: List<String>?,
     )
@@ -71,7 +73,8 @@ object SpeciesPatch {
         val stats = LinkedHashMap<String, Int>()
         var primarySpecified = false; var primary: String? = null
         var secondarySpecified = false; var secondary: String? = null
-        var abilities: List<String>? = null
+        var mergeAbilities: List<String>? = null
+        var replaceAbilities: List<String>? = null
         var mergeMoves: List<String>? = null
         var replaceMoves: List<String>? = null
 
@@ -104,7 +107,13 @@ object SpeciesPatch {
                     val list = rawVal.split('|').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
                     if (list.isEmpty()) return null
                     if (list.any { !it.matches(Regex("h?:?[a-z0-9_]+")) }) return null
-                    abilities = list
+                    mergeAbilities = list
+                }
+                rawKey == "abilitiesreplace" || rawKey == "abilityreplace" -> {
+                    val list = rawVal.split('|').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+                    if (list.isEmpty()) return null
+                    if (list.any { !it.matches(Regex("h?:?[a-z0-9_]+")) }) return null
+                    replaceAbilities = list
                 }
                 rawKey == "moves" || rawKey == "learnset" -> {
                     mergeMoves = parseMoveEntries(rawVal) ?: return null
@@ -116,8 +125,10 @@ object SpeciesPatch {
             }
         }
         if (stats.isEmpty() && !primarySpecified && !secondarySpecified &&
-            abilities == null && mergeMoves == null && replaceMoves == null) return null
-        return Parsed(stats, primarySpecified, primary, secondarySpecified, secondary, abilities, mergeMoves, replaceMoves)
+            mergeAbilities == null && replaceAbilities == null &&
+            mergeMoves == null && replaceMoves == null) return null
+        return Parsed(stats, primarySpecified, primary, secondarySpecified, secondary,
+            mergeAbilities, replaceAbilities, mergeMoves, replaceMoves)
     }
 
     fun buildJson(speciesId: String, p: Parsed): String {
@@ -140,8 +151,9 @@ object SpeciesPatch {
         if (p.secondaryTypeSpecified) {
             sections.add("  \"secondaryType\": " + jsonNullableString(p.secondaryType))
         }
-        if (p.abilities != null) {
-            val arr = p.abilities.joinToString(", ") { "\"" + it + "\"" }
+        val abilities = p.replaceAbilities ?: p.mergeAbilities
+        if (abilities != null) {
+            val arr = abilities.joinToString(", ") { "\"" + it + "\"" }
             sections.add("  \"abilities\": [$arr]")
         }
         val moves = p.replaceMoves ?: p.mergeMoves
