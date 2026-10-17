@@ -19,3 +19,8 @@ Thumbs.db
 
 # 解包出来的 Cobblemon showdown 引擎（仅用于研究，勿提交）
 research/showdown/
+
+# 反编译调查临时产物，勿提交
+research/graal-bc.txt
+research/graal-v.txt
+research/at-bc.txt
