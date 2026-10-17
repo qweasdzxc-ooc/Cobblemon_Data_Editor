@@ -59,5 +59,5 @@ object AbilitySpecFactory {
     }
 
     private fun esc(s: String): String =
-        s.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"").replace("\n", " ").replace("\r", " ")
+        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ")
 }

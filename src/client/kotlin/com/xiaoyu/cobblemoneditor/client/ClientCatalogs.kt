@@ -36,13 +36,32 @@ object ClientCatalogs {
         val file = abilityJsFile(id) ?: return null
         if (!Files.exists(file)) return null
         return try {
-            val text = Files.readString(file)
-            Regex("""shortDesc:s*"([^"]*)"""").find(text)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
+            extractJsString(Files.readString(file), "shortDesc")
         } catch (_: Exception) {
             null
         }
     }
 
+    private fun readDesc(id: String): String? {
+        val file = abilityJsFile(id) ?: return null
+        if (!Files.exists(file)) return null
+        return try {
+            extractJsString(Files.readString(file), "desc")
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun extractJsString(text: String, key: String): String? {
+        val marker = key + ":"
+        val idx = text.indexOf(marker)
+        if (idx < 0) return null
+        val after = text.substring(idx + marker.length).trimStart()
+        if (!after.startsWith('"')) return null
+        val end = after.indexOf('"', 1)
+        if (end <= 0) return null
+        return after.substring(1, end).takeIf { it.isNotBlank() }
+    }
     private fun abilityJsFile(id: String): Path? {
         val server = Minecraft.getInstance().singleplayerServer ?: return null
         return server.getWorldPath(LevelResource.ROOT)

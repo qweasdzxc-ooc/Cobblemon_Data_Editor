@@ -86,5 +86,5 @@ object MoveSpecFactory {
     private fun cap(s: String) = s.replaceFirstChar { it.uppercaseChar() }
 
     private fun esc(s: String): String =
-        s.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"").replace("\n", " ").replace("\r", " ")
+        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ")
 }
