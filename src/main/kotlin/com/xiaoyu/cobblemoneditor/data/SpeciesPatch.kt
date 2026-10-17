@@ -9,12 +9,17 @@ package com.xiaoyu.cobblemoneditor.data
  * - 属性键：primaryType（别名 type1）、secondaryType（别名 type2）；值用类型 id（小写），
  *           "none"/"null"/"" 表示该属性为空（无第二属性）
  * - 特性键：abilities；值用 | 分隔的列表，例如 static|h:lightningrod（h: 前缀=隐藏特性）
+ * - 学习表键：moves（与现有学习表合并）、movesReplace（整体替换）；
+ *   值用 | 分隔的 "<method>:<moveId>" 列表，例如 1:tackle|5:growl|egg:leechseed|tm:thunderbolt
+ *   （method 可为等级 1..100、egg、tm、tutor、legacy、special）
  */
 object SpeciesPatch {
     const val MIN = 0
     const val MAX = 255
 
-    private val STAT_ALIASES = mapOf(
+    private val MOVE_METHODS = setOf("egg", "tm", "tutor", "legacy", "special")
+
+    internal val STAT_ALIASES = mapOf(
         "hp" to "hp",
         "attack" to "attack", "atk" to "attack",
         "defence" to "defence", "defense" to "defence", "def" to "defence",
@@ -30,6 +35,8 @@ object SpeciesPatch {
         val secondaryTypeSpecified: Boolean,
         val secondaryType: String?,
         val abilities: List<String>?,
+        val mergeMoves: List<String>?,
+        val replaceMoves: List<String>?,
     )
 
     private fun normType(v: String): String? {
@@ -38,11 +45,35 @@ object SpeciesPatch {
         return if (t.matches(Regex("[a-z0-9_]+"))) t else null
     }
 
+    /** 解析 "<method>:<moveId>" 列表（| 分隔），非法返回 null；去重保序。 */
+    private fun parseMoveEntries(raw: String): List<String>? {
+        val entries = raw.split('|').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+        if (entries.isEmpty()) return null
+        val out = LinkedHashSet<String>()
+        for (e in entries) {
+            val idx = e.indexOf(':')
+            if (idx <= 0) return null
+            val method = e.substring(0, idx)
+            val moveId = e.substring(idx + 1)
+            if (!moveId.matches(Regex("[a-z0-9]+"))) return null
+            if (method in MOVE_METHODS) {
+                out.add(e)
+            } else {
+                val lvl = method.toIntOrNull() ?: return null
+                if (lvl < 1 || lvl > 100) return null
+                out.add(e)
+            }
+        }
+        return out.toList()
+    }
+
     fun parseSpec(spec: String): Parsed? {
         val stats = LinkedHashMap<String, Int>()
         var primarySpecified = false; var primary: String? = null
         var secondarySpecified = false; var secondary: String? = null
         var abilities: List<String>? = null
+        var mergeMoves: List<String>? = null
+        var replaceMoves: List<String>? = null
 
         for (part in spec.split(',')) {
             val t = part.trim()
@@ -75,17 +106,18 @@ object SpeciesPatch {
                     if (list.any { !it.matches(Regex("h?:?[a-z0-9_]+")) }) return null
                     abilities = list
                 }
+                rawKey == "moves" || rawKey == "learnset" -> {
+                    mergeMoves = parseMoveEntries(rawVal) ?: return null
+                }
+                rawKey == "movesreplace" || rawKey == "learnsetreplace" -> {
+                    replaceMoves = parseMoveEntries(rawVal) ?: return null
+                }
                 else -> return null
             }
         }
-        if (stats.isEmpty() && !primarySpecified && !secondarySpecified && abilities == null) return null
-        return Parsed(stats, primarySpecified, primary, secondarySpecified, secondary, abilities)
-    }
-
-    fun build(speciesId: String, spec: String): String? {
-        if (!speciesId.matches(Regex("[a-z0-9_]+"))) return null
-        val parsed = parseSpec(spec) ?: return null
-        return buildJson(speciesId, parsed)
+        if (stats.isEmpty() && !primarySpecified && !secondarySpecified &&
+            abilities == null && mergeMoves == null && replaceMoves == null) return null
+        return Parsed(stats, primarySpecified, primary, secondarySpecified, secondary, abilities, mergeMoves, replaceMoves)
     }
 
     fun buildJson(speciesId: String, p: Parsed): String {
@@ -111,6 +143,11 @@ object SpeciesPatch {
         if (p.abilities != null) {
             val arr = p.abilities.joinToString(", ") { "\"" + it + "\"" }
             sections.add("  \"abilities\": [$arr]")
+        }
+        val moves = p.replaceMoves ?: p.mergeMoves
+        if (moves != null) {
+            val arr = moves.joinToString(", ") { "\"" + it + "\"" }
+            sections.add("  \"moves\": [$arr]")
         }
         return "{\n  \"target\": \"cobblemon:$speciesId\",\n" + sections.joinToString(",\n") + "\n}\n"
     }

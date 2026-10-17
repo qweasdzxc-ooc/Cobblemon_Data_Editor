@@ -47,6 +47,63 @@ object EffectBricks {
         EffectBrick("weather_power_boost", "天气时威力加成", listOf("天气", "倍率"),
             listOf("sunnyday:1.5" to "晴天×1.5", "raindance:1.5" to "雨天×1.5", "sandstorm:1.3" to "沙暴×1.3"),
             MoveBrickKind.HANDLER, { p -> "onBasePower(basePower, attacker, defender, move) { if (this.field.isWeather('" + p[0] + "')) return this.chainModify(" + p[1] + "); }" }),
+        EffectBrick("status_field", "附加异常状态", listOf("状态"),
+            listOf("par" to "麻痹", "brn" to "灼伤", "psn" to "中毒", "frz" to "冰冻", "slp" to "睡眠"),
+            MoveBrickKind.FIELD, { p -> "status: '" + p[0] + "'" }),
+        EffectBrick("volatile_status", "附加变化状态", listOf("变化状态"),
+            listOf("confusion" to "混乱", "flinch" to "畏缩", "partiallytrapped" to "束缚"),
+            MoveBrickKind.FIELD, { p -> "volatileStatus: '" + p[0] + "'" }),
+        EffectBrick("weather_set", "改变天气", listOf("天气"),
+            listOf("sunnyday" to "大晴天", "raindance" to "下雨", "sandstorm" to "沙暴", "snow" to "冰雹"),
+            MoveBrickKind.FIELD, { p -> "weather: '" + p[0] + "'" }),
+        EffectBrick("terrain_set", "改变场地", listOf("场地"),
+            listOf("electricterrain" to "电气场地", "grassyterrain" to "青草场地", "mistyterrain" to "薄雾场地", "psychicterrain" to "精神场地"),
+            MoveBrickKind.FIELD, { p -> "terrain: '" + p[0] + "'" }),
+        EffectBrick("side_condition", "场地保护状态", listOf("状态"),
+            listOf("reflect" to "反射壁", "lightscreen" to "光墙", "safeguard" to "神秘守护", "mist" to "白雾"),
+            MoveBrickKind.FIELD, { p -> "sideCondition: '" + p[0] + "'" }),
+        EffectBrick("crit_ratio", "会心等级", listOf("会心等级(2=易会心,3=极会心)"),
+            listOf("1" to "普通(1/24)", "2" to "易会心(1/8)", "3" to "极会心(1/2)"),
+            MoveBrickKind.FIELD, { p -> "critRatio: " + p[0] }),
+        EffectBrick("force_switch", "强制换下对手", listOf(),
+            listOf("" to "吼叫"),
+            MoveBrickKind.FIELD, { "forceSwitch: true" }),
+        EffectBrick("self_switch", "使用后换下自己", listOf(),
+            listOf("" to "急速折返"),
+            MoveBrickKind.FIELD, { "selfSwitch: true" }),
+        EffectBrick("ohko", "一击必杀", listOf(),
+            listOf("" to "地裂"),
+            MoveBrickKind.FIELD, { "ohko: true" }),
+        EffectBrick("always_hit", "必中", listOf(),
+            listOf("" to "高速星星"),
+            MoveBrickKind.FIELD, { "accuracy: true" }),
+        EffectBrick("breaks_protect", "穿透守住", listOf(),
+            listOf("" to "佯攻"),
+            MoveBrickKind.FIELD, { "breaksProtect: true" }),
+        EffectBrick("no_pp_boosts", "无视PP上限", listOf(),
+            listOf("" to "复活祝福"),
+            MoveBrickKind.FIELD, { "noPPBoosts: true" }),
+        EffectBrick("twoturn_charge", "蓄力攻击", listOf(),
+            listOf("" to "神鸟猛击(蓄力一回合)"),
+            MoveBrickKind.HANDLER, { _ -> """onTryMove(attacker, defender, move) {
+				if (attacker.removeVolatile(move.id)) {
+					return;
+				}
+				this.add("-prepare", attacker, move.name);
+				if (!this.runEvent("ChargeMove", attacker, defender, move)) {
+					return;
+				}
+				attacker.addVolatile("twoturnmove", defender);
+				return null;
+			}""" }),
+        EffectBrick("clear_all_boosts", "清除全场能力变化", listOf(),
+            listOf("" to "黑雾"),
+            MoveBrickKind.HANDLER, { _ -> """onHitField() {
+				this.add("-clearallboost");
+				for (const pokemon of this.getAllActive()) {
+					pokemon.clearBoosts();
+				}
+			}""" }),
     )
 
     fun byId(id: String): EffectBrick? = ALL.firstOrNull { it.id == id }

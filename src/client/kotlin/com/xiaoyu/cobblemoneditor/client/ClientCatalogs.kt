@@ -1,6 +1,7 @@
 package com.xiaoyu.cobblemoneditor.client
 
 import com.cobblemon.mod.common.api.abilities.Abilities
+import com.cobblemon.mod.common.api.moves.Moves
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
 import net.minecraft.client.Minecraft
 import net.minecraft.client.resources.language.I18n
@@ -30,6 +31,17 @@ object ClientCatalogs {
                     else -> readShortDesc(a.name) ?: a.name
                 }
                 a.name to display
+            }
+
+    /** 招式：id -> 显示名（lang 优先，兜底 id） */
+    fun moves(): List<Pair<String, String>> =
+        Moves.all()
+            .sortedBy { it.name }
+            .map { m ->
+                val key = "cobblemon.move." + m.name
+                val zh = I18n.get(key)
+                val display = if (zh != key) zh else m.name
+                m.name to display
             }
 
     private fun readShortDesc(id: String): String? {

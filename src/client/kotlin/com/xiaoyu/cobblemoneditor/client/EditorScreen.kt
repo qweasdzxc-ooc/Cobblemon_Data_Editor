@@ -1,5 +1,6 @@
 package com.xiaoyu.cobblemoneditor.client
 
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
 import com.xiaoyu.cobblemoneditor.client.widget.Dropdown
 import com.xiaoyu.cobblemoneditor.data.TypeCatalog
 import net.minecraft.client.Minecraft
@@ -17,6 +18,7 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
     private val statBoxes = LinkedHashMap<String, EditBox>()
     private lateinit var speciesSearchBox: EditBox
     private lateinit var abilitySearchBox: EditBox
+    private lateinit var movesBox: EditBox
     private lateinit var speciesDropdown: Dropdown
     private lateinit var abilityDropdown1: Dropdown
     private lateinit var abilityDropdown2: Dropdown
@@ -74,6 +76,13 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         addRenderableWidget(abilitySearchBox)
         rebuildAbilityDropdowns()
 
+        // 学习表（预填当前选中精灵的完整学习表，可直接编辑；留空=不改）
+        movesBox = EditBox(this.font, fieldX, 184, 190, 14, Component.empty())
+        movesBox.setMaxLength(2048)
+        movesBox.setHint(Component.literal("1:tackle|5:growl|egg:xx|tm:yy"))
+        addRenderableWidget(movesBox)
+        movesBox.value = currentLearnset()
+
         // 按钮
         val by = height - 28
         addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, by, 68, 20).build())
@@ -95,6 +104,22 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         speciesDropdown = Dropdown(fieldX + 110, 16, 100, 16, f.map { it.third }, f.map { it.first }, 10) { speciesId = it }
         speciesDropdown.setSelectedByValue(speciesId)
         addRenderableWidget(speciesDropdown); dropdowns.add(speciesDropdown)
+        if (::movesBox.isInitialized) movesBox.value = currentLearnset()
+    }
+
+    /** 当前选中精灵的完整学习表（"1:tackle|egg:xx|tm:yy"），查不到返回空串。 */
+    private fun currentLearnset(): String {
+        val s = PokemonSpecies.implemented.find { it.resourceIdentifier.path == speciesId } ?: return ""
+        val ls = s.moves
+        val parts = mutableListOf<String>()
+        for ((level, templates) in ls.levelUpMoves.entries.sortedBy { it.key })
+            for (t in templates) parts.add("$level:${t.name}")
+        for (t in ls.eggMoves) parts.add("egg:${t.name}")
+        for (t in ls.tmMoves) parts.add("tm:${t.name}")
+        for (t in ls.tutorMoves) parts.add("tutor:${t.name}")
+        for (t in ls.legacyMoves) parts.add("legacy:${t.name}")
+        for (t in ls.specialMoves) parts.add("special:${t.name}")
+        return parts.joinToString("|")
     }
 
     private fun filteredAbilities(): List<Pair<String, String>> {
@@ -139,6 +164,22 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         if (ability2.isNotEmpty()) ab.add(ability2)
         if (hiddenAbility.isNotEmpty()) ab.add("h:" + hiddenAbility)
         if (ab.isNotEmpty()) parts.add("abilities=" + ab.joinToString("|"))
+        val movesRaw = movesBox.value.trim()
+        if (movesRaw.isNotEmpty()) {
+            val entries = movesRaw.split('|').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+            for (e in entries) {
+                val idx = e.indexOf(':')
+                if (idx <= 0 || !e.substring(idx + 1).matches(Regex("[a-z0-9]+"))) {
+                    msg("学习表格式错误: $e（应为 1:tackle|egg:xx|tm:yy）"); return
+                }
+                val method = e.substring(0, idx)
+                if (method !in setOf("egg", "tm", "tutor", "legacy", "special")) {
+                    val lvl = method.toIntOrNull()
+                    if (lvl == null || lvl < 1 || lvl > 100) { msg("学习表等级无效: $e（等级 1-100）"); return }
+                }
+            }
+            parts.add("movesReplace=" + entries.joinToString("|"))
+        }
         if (parts.isEmpty()) { msg("至少填一项内容"); return }
         val spec = parts.joinToString(",")
         val player = Minecraft.getInstance().player
@@ -184,7 +225,8 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         g.drawString(this.font, "特性1:", left, 156, 0xAAAAAA)
         g.drawString(this.font, "特性2:", left + 120, 156, 0xAAAAAA)
         g.drawString(this.font, "隐藏特性:", left, 174, 0xAAAAAA)
-        g.drawString(this.font, "留空=不改；保存后重进世界生效", left, 200, 0x888888)
+        g.drawString(this.font, "学习表:", left, 188, 0xAAAAAA)
+        g.drawString(this.font, "留空=不改；保存后重进世界生效", left, 202, 0x888888)
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }
 

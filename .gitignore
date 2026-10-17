@@ -24,3 +24,10 @@ research/showdown/
 research/graal-bc.txt
 research/graal-v.txt
 research/at-bc.txt
+
+# Extracted Cobblemon .class files (research only)
+research/cobblemon-classes/
+
+# Source dump of this mod (research only)
+CobblemonDataEditor-src.zip
+
