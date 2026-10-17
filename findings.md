@@ -30,6 +30,7 @@
 ### moves/*.js 期望格式 ✅
 - 裸 Showdown 招式对象字面量即可（无需包装/函数）。证据：research/temp/sim_cobblemon_registries.js:104-112 `MoveRegistry.register`：`if (!data.num || data.num === 0) data.num = 10001 + size; if (!data.name) data.name = _id`（num/name 自动补）；id 由 name 经 DataMove.toID 派生。
 - Moves.reload（research/temp/Moves.kt:58-67）：流式读 `moves/*.js` → receiveMoveData(fileName, 对象) → 回读构建 MoveTemplate 必读：id、num、type、category、basePower、target、pp、priority（asInt/asDouble 抛异常则整条丢弃并报错日志）；accuracy 缺省→-1.0，critRatio 缺省→1.0。
+- ⚠️ **basePower 缺键即整条招式被丢弃**（Moves.kt:77 `jsMove.get("basePower").asDouble` 无条件取值）→ 状态招式必须显式输出 `basePower: 0`。2026-10-18 已修 MoveSpec.renderJs（所有招式统一输出 basePower，状态=0）。官方数据里的状态招式都带 `basePower: 0` 才幸免。
 - **name 必须 ASCII**：toID 剔除非字母数字 → 中文名会得到空 id 直接废掉。中文显示名放 shortDesc（当前 MoveSpec.renderJs 已正确）。
 - 实锤 bug（旧版本生成的真实数据，world "新的开始" saves\新的开始\datapacks\cobblemoneditor\data\cobblemoneditor\moves\fengren.js）：`name: "风刃"` 中文 → 空 id；另有重复 priority 键（JS 后者覆盖，无害）。当前代码已改为 name=ASCII id。
 - 成功样例（同目录 abilities\huomian.js）：`{ name:"huomian", flags:{}, rating:3, shortDesc, desc, onTryHit(...) }` 正常。

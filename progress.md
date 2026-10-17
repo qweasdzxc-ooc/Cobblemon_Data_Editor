@@ -42,3 +42,9 @@
 - jar 校验：fabric.mod.json version=0.3.1，含 AbilityPoolMerger/SpeciesFactory/NewSpeciesScreen .class ✅
 - 部署：mods/[自制]CobblemonDataEditor-0.3.1.jar（170747B），0.3.0 移入 _mods_backup_20261007_234644
 - git commit df2b0ed（feat: ability pool merge semantics + fixes）
+
+## 2026-10-18 主动代码自检（客户端界面）
+- 巡检：latest.log 仍停在 10/17 22:42（用户未再游玩）；数据包文件全部健康
+- 修 bug：EditorScreen 切换精灵时未清空上一精灵的编辑状态（六维/属性/特性/学习表会泄漏到新精灵上，保存即串改数据）→ 新增 onSpeciesChanged() 全量重置，类型下拉提升为字段
+- 修：NewSpeciesScreen id 必须以字母开头（与 SpeciesFactory name 规则一致，避免服务端报错晦涩）；特性槽标签"不改"→"无"
+- 构建 ✅ 4s，部署 0.3.1（171209B），commit 43f2c91 + e5c28d0

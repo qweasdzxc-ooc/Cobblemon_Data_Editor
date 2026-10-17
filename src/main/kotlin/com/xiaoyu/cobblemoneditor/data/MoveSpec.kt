@@ -58,7 +58,9 @@ object MoveSpecFactory {
         fields.add("name: " + '"' + m.id + '"')
         fields.add("type: " + '"' + cap(m.type) + '"')
         fields.add("category: " + '"' + cap(m.category) + '"')
-        m.basePower?.let { fields.add("basePower: " + it) }
+        // Moves.reload 读回时 jsMove.get("basePower").asDouble 无条件取值：
+        // 状态招式若不输出该键会被跳过（注册表静默丢弃）。统一输出，状态招式补 0。
+        fields.add("basePower: " + (m.basePower ?: 0))
         fields.add("accuracy: " + m.accuracy)
         fields.add("pp: " + m.pp)
         fields.add("priority: " + m.priority)
