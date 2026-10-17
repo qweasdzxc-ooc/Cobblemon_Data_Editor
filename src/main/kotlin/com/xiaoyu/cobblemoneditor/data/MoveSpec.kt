@@ -35,9 +35,9 @@ object MoveSpecFactory {
         val category = (m["category"] ?: "physical").lowercase()
         if (category !in CATEGORIES) return null
         val basePower = if (category == "status") null else (m["power"]?.toIntOrNull() ?: return null)
-        val accuracy = m["accuracy"]?.toIntOrNull() ?: 100
-        val pp = m["pp"]?.toIntOrNull() ?: 10
-        val priority = m["priority"]?.toIntOrNull() ?: 0
+        val accuracy = m["accuracy"]?.let { it.toIntOrNull() ?: return null } ?: 100
+        val pp = m["pp"]?.let { it.toIntOrNull() ?: return null } ?: 10
+        val priority = m["priority"]?.let { it.toIntOrNull() ?: return null } ?: 0
         val target = m["target"] ?: "normal"
         val flags = m["flags"]?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() && it != "none" && it != "noncontact" } ?: emptyList()
 
@@ -47,7 +47,9 @@ object MoveSpecFactory {
             if (t2.isEmpty()) return@forEach
             val parts = t2.split(':')
             val brick = EffectBricks.byId(parts[0].trim()) ?: return null
-            bricks.add(ParsedBrick(brick, parts.drop(1).map { it.trim() }))
+            val params = parts.drop(1).map { it.trim() }
+            if (!validateBrickParams(brick.paramHints, params)) return null
+            bricks.add(ParsedBrick(brick, params))
         }
         return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks)
     }

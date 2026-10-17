@@ -48,3 +48,8 @@
 - 修 bug：EditorScreen 切换精灵时未清空上一精灵的编辑状态（六维/属性/特性/学习表会泄漏到新精灵上，保存即串改数据）→ 新增 onSpeciesChanged() 全量重置，类型下拉提升为字段
 - 修：NewSpeciesScreen id 必须以字母开头（与 SpeciesFactory name 规则一致，避免服务端报错晦涩）；特性槽标签"不改"→"无"
 - 构建 ✅ 4s，部署 0.3.1（171209B），commit 43f2c91 + e5c28d0
+
+## 2026-10-18 渲染管线终审（对照 Cobblemon 读回代码）
+- 逐项核验 MoveSpec.renderJs/AbilitySpec.renderJs 输出 vs Cobblemon 读回（Moves.kt/Abilities.kt）：ability 读回只需 id ✅；多 secondary 合并 secondaries ✅；同触发时机 ability handler 合并 ✅；accuracy:true→-1.0 ✅
+- ⚠️ 抓到真 bug：Moves.kt:77 `jsMove.get("basePower").asDouble` 无条件取值 → 编辑器生成的状态招式（无 basePower 键）会被注册表静默丢弃，文件在但游戏里永远看不到。官方状态招式都带 basePower:0 才幸免
+- 修复：MoveSpec.renderJs 统一输出 basePower（状态=0）；findings.md 记录该陷阱；构建 ✅ 部署 ✅ commit 4c49ad6

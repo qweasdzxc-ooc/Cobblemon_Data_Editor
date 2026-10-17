@@ -29,7 +29,9 @@ object AbilitySpecFactory {
             if (t2.isEmpty()) return@forEach
             val parts = t2.split(':')
             val brick = AbilityEffects.byId(parts[0].trim()) ?: return null
-            effects.add(ParsedAbilityEffect(brick, parts.drop(1).map { it.trim() }))
+            val params = parts.drop(1).map { it.trim() }
+            if (!validateBrickParams(brick.paramHints, params)) return null
+            effects.add(ParsedAbilityEffect(brick, params))
         }
         return AbilitySpec(id, name, desc, effects)
     }

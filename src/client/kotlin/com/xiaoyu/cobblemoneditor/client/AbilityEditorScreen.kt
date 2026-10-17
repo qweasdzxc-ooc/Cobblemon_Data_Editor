@@ -2,6 +2,7 @@ package com.xiaoyu.cobblemoneditor.client
 
 import com.xiaoyu.cobblemoneditor.client.widget.Dropdown
 import com.xiaoyu.cobblemoneditor.data.AbilityEffects
+import com.xiaoyu.cobblemoneditor.data.validateBrickParams
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
@@ -80,7 +81,14 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
 
     private fun addEffect() {
         if (effects.size >= maxEffects) { msg("最多添加 $maxEffects 条效果"); return }
-        effects.add(currentBrick to paramsBox.value.trim())
+        val brick = AbilityEffects.byId(currentBrick) ?: return
+        val raw = paramsBox.value.trim()
+        val params = if (raw.isEmpty()) emptyList() else raw.split(':').map { it.trim() }
+        if (!validateBrickParams(brick.paramHints, params)) {
+            msg("参数不完整或格式错误（" + brick.paramHints.joinToString("/") + "）；示例：" + brick.presets.firstOrNull()?.first.orEmpty())
+            return
+        }
+        effects.add(currentBrick to raw)
         rebuildRemoveButtons()
     }
 

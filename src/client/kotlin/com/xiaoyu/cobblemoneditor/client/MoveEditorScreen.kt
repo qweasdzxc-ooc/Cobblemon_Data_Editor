@@ -7,6 +7,7 @@ import com.xiaoyu.cobblemoneditor.data.MoveFlagCatalog
 import com.xiaoyu.cobblemoneditor.data.PriorityCatalog
 import com.xiaoyu.cobblemoneditor.data.TargetCatalog
 import com.xiaoyu.cobblemoneditor.data.TypeCatalog
+import com.xiaoyu.cobblemoneditor.data.validateBrickParams
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
@@ -105,7 +106,14 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
 
     private fun addBrick() {
         if (bricks.size >= maxBricks) { msg("最多添加 $maxBricks 条效果"); return }
-        bricks.add(currentBrick to paramsBox.value.trim())
+        val brick = EffectBricks.byId(currentBrick) ?: return
+        val raw = paramsBox.value.trim()
+        val params = if (raw.isEmpty()) emptyList() else raw.split(':').map { it.trim() }
+        if (!validateBrickParams(brick.paramHints, params)) {
+            msg("参数不完整或格式错误（" + brick.paramHints.joinToString("/") + "）；示例：" + brick.presets.firstOrNull()?.first.orEmpty())
+            return
+        }
+        bricks.add(currentBrick to raw)
         rebuildRemoveButtons()
     }
 
@@ -119,7 +127,7 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val power = powerBox.value.trim(); if (power.isNotEmpty()) { if (power.toIntOrNull() == null) { msg("威力必须是数字"); return }; parts.add("power=" + power) }
-        val acc = accBox.value.trim(); if (acc.isNotEmpty()) parts.add("accuracy=" + acc)
+        val acc = accBox.value.trim(); if (acc.isNotEmpty()) { if (acc.toIntOrNull() == null) { msg("命中必须是数字"); return }; parts.add("accuracy=" + acc) }
         val pp = ppBox.value.trim(); if (pp.isNotEmpty()) parts.add("pp=" + pp)
         parts.add("type=" + type)
         parts.add("category=" + category)

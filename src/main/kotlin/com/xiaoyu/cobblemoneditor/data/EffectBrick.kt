@@ -4,6 +4,21 @@ package com.xiaoyu.cobblemoneditor.data
 enum class MoveBrickKind { FIELD, SECONDARY, HANDLER }
 
 /**
+ * 校验积木参数是否合法：个数必须与 paramHints 完全一致；
+ * 提示含数值关键词的槽位必须是数字（否则渲染阶段会越界崩溃或生成语法错误的 JS）。
+ */
+fun validateBrickParams(hints: List<String>, params: List<String>): Boolean {
+    if (params.size != hints.size) return false
+    val numericKeywords = listOf("概率", "级数", "分母", "次数", "倍率", "等级", "会心", "阈值", "加成")
+    return hints.indices.all { i ->
+        val v = params[i]
+        if (v.isEmpty()) false
+        else if (numericKeywords.any { hints[i].contains(it) }) v.toDoubleOrNull() != null
+        else true
+    }
+}
+
+/**
  * 招式效果积木。
  * - FIELD：render 返回完整 "key: value" 片段
  * - SECONDARY：render 返回 "{...}" 值片段，多个会合并成 secondaries 数组
