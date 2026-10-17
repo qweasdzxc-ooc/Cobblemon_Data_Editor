@@ -121,7 +121,7 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
         if (::abilityDropdown2.isInitialized) removeWidget(abilityDropdown2)
         if (::hiddenAbilityDropdown.isInitialized) removeWidget(hiddenAbilityDropdown)
         val f = filteredAbilities()
-        val labels = listOf("不改") + f.map { it.second }
+        val labels = listOf("无") + f.map { it.second }
         val values = listOf("") + f.map { it.first }
         if (ability1.isNotEmpty() && f.none { it.first == ability1 }) ability1 = ""
         if (ability2.isNotEmpty() && f.none { it.first == ability2 }) ability2 = ""
@@ -176,7 +176,7 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
 
     private fun save() {
         val id = idBox.value.trim().lowercase()
-        if (!id.matches(Regex("[a-z0-9_]+"))) { msg("id 仅限小写字母/数字/下划线"); return }
+        if (!id.matches(Regex("[a-z][a-z0-9_]*"))) { msg("id 须以字母开头，仅限小写字母/数字/下划线"); return }
         val dex = dexBox.value.trim().toIntOrNull()
         if (dex == null || dex !in 1..99999) { msg("图鉴号需 1-99999"); return }
         if (type1.isEmpty()) { msg("请选择属性1"); return }

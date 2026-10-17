@@ -20,6 +20,8 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
     private lateinit var abilitySearchBox: EditBox
     private lateinit var movesBox: EditBox
     private lateinit var speciesDropdown: Dropdown
+    private lateinit var typeDropdown1: Dropdown
+    private lateinit var typeDropdown2: Dropdown
     private lateinit var abilityDropdown1: Dropdown
     private lateinit var abilityDropdown2: Dropdown
     private lateinit var abilityDropdown3: Dropdown
@@ -65,10 +67,10 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         // 属性
         val typeLabels = listOf("不添加") + TypeCatalog.TYPES.map { it.second }
         val typeValues = listOf("") + TypeCatalog.TYPES.map { it.first }
-        val d1 = Dropdown(fieldX, 112, 92, 14, typeLabels, typeValues, 10) { type1 = it }
-        addRenderableWidget(d1); dropdowns.add(d1)
-        val d2 = Dropdown(fieldX + 110, 112, 92, 14, typeLabels, typeValues, 10) { type2 = it }
-        addRenderableWidget(d2); dropdowns.add(d2)
+        typeDropdown1 = Dropdown(fieldX, 112, 92, 14, typeLabels, typeValues, 10) { type1 = it }
+        addRenderableWidget(typeDropdown1); dropdowns.add(typeDropdown1)
+        typeDropdown2 = Dropdown(fieldX + 110, 112, 92, 14, typeLabels, typeValues, 10) { type2 = it }
+        addRenderableWidget(typeDropdown2); dropdowns.add(typeDropdown2)
 
         // 特性
         abilitySearchBox = EditBox(this.font, fieldX, 132, 190, 14, Component.empty())
@@ -96,15 +98,28 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         return speciesList.filter { (id, en, zh) -> id.contains(q) || en.lowercase().contains(q) || zh.contains(q) }
     }
 
+    /** 切换精灵时清空全部编辑状态，防止上一个精灵的修改泄漏到新精灵上。 */
+    private fun onSpeciesChanged() {
+        if (::movesBox.isInitialized) movesBox.value = currentLearnset()
+        for (box in statBoxes.values) box.value = ""
+        type1 = ""; type2 = ""
+        if (::typeDropdown1.isInitialized) {
+            typeDropdown1.setSelectedByValue(""); typeDropdown2.setSelectedByValue("")
+        }
+        ability1 = ""; ability2 = ""; hiddenAbility = ""
+        if (::abilityDropdown1.isInitialized) {
+            abilityDropdown1.setSelectedByValue(""); abilityDropdown2.setSelectedByValue(""); abilityDropdown3.setSelectedByValue("")
+        }
+    }
+
     private fun rebuildSpeciesDropdown() {
         if (::speciesDropdown.isInitialized) removeWidget(speciesDropdown)
         val f = filteredSpecies()
         if (f.isEmpty()) return
-        if (f.none { it.first == speciesId }) speciesId = f[0].first
-        speciesDropdown = Dropdown(fieldX + 110, 16, 100, 16, f.map { it.third }, f.map { it.first }, 10) { speciesId = it }
+        if (f.none { it.first == speciesId }) { speciesId = f[0].first; onSpeciesChanged() }
+        speciesDropdown = Dropdown(fieldX + 110, 16, 100, 16, f.map { it.third }, f.map { it.first }, 10) { speciesId = it; onSpeciesChanged() }
         speciesDropdown.setSelectedByValue(speciesId)
         addRenderableWidget(speciesDropdown); dropdowns.add(speciesDropdown)
-        if (::movesBox.isInitialized) movesBox.value = currentLearnset()
     }
 
     /** 当前选中精灵的完整学习表（"1:tackle|egg:xx|tm:yy"），查不到返回空串。 */
