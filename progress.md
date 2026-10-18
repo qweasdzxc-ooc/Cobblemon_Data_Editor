@@ -117,3 +117,8 @@
   接触剧毒/击倒强化按真实积木重建 ②新增 isSaneRawJs 校验（括号配平+顶层裸冒号拒绝），服务端与客户端双端拦截
   ③新增特性积木 faint_boost（onSourceAfterFaint 击倒对手后提升）④v0.3.6 构建部署。
 - 教训：任何会拼进 Cobblemon 注册表 JS 的用户输入都必须做语法级防呆；数据包 eval 失败=世界无法进入（致命）。
+## v0.3.7 —— 新特性炸档与中文名缺失修复（2026-10-18 晚）
+- 问题1：新特性保存后进世界报数据包错误。根因=我们自己的 AbilityTrigger.ON_MODIFY_MOVE 参数串写成 "move, pokemon, target, move"（重复形参），GraalVM strict mode 直接拒绝整个特性注册表求值 → 进世界炸档。已改正确签名 "move, pokemon, target, source"；新增 JUnit 测试断言所有触发时机参数无重复；用户存档 c517273.js 已备份并修复。
+- 问题2：新特性不显示中文名/描述。根因=游戏运行期间客户端全程锁定 resources.zip，保存时的 lang 写入全部失败。重构：保存只写数据包；lang 由 syncAll 统一负责——SERVER_STARTED 补写（内容无变化时不写文件）+ SERVER_STOPPED 后台线程趁锁释放后补写（最多 30 秒重试）；写入失败清理临时文件。live 存档的 resources.zip 已手工补齐 c597391/c517273 条目。
+- 问题3：进世界二次资源加载。根因=syncAll 每次启动都重写 resources.zip 触发资源管理器重载。修复=内容与现包一致时跳过写入（不改变文件时间戳 → 不触发重载）。
+- 部署：v0.3.7 jar 已装入整合包 mods（0.3.6 归档），Minecraft 关闭状态部署无锁。

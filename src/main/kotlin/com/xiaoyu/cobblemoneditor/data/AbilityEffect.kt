@@ -29,7 +29,7 @@ enum class AbilityTrigger(
     ON_CHANGE_BOOST("onChangeBoost", "boost, target, source, effect", "能力变化结算时"),
     ON_TRY_BOOST("onTryBoost", "boost, target, source, effect", "能力变化尝试时"),
     ON_TAKE_ITEM("onTakeItem", "item, pokemon, source", "道具被夺时"),
-    ON_MODIFY_MOVE("onModifyMove", "move, pokemon, target, move", "招式修正时"),
+    ON_MODIFY_MOVE("onModifyMove", "move, pokemon, target, source", "招式修正时"),
     ON_MODIFY_CRIT_RATIO("onModifyCritRatio", "critRatio, source, target, move", "会心等级计算时"),
     ON_SOURCE_AFTER_FAINT("onSourceAfterFaint", "length, target, source, effect", "击倒对手后"),
 }

@@ -18,23 +18,30 @@ import java.util.zip.ZipOutputStream
  *   cobblemoneditor.species.<id>.name（新物种 namespace=cobblemoneditor）
  *
  * 数据包无法提供 lang（lang 属于资源包），因此没有这些条目时游戏内会显示
- * "cobblemon.move.xxx" 之类的原始翻译键。resources.zip 在进入世界时读取，
- * 与数据包一样"重进世界后生效"。
+ * "cobblemon.move.xxx" 之类的原始翻译键。
+ *
+ * 关键约束（实测）：游戏运行期间客户端全程持有 resources.zip 的文件锁，任何替换都会失败；
+ * 而且资源管理器检测到包文件变化会触发第二次全量资源加载。因此写入策略是：
+ *   - 内容与现包完全一致时不写文件（无变化 → 无重载）；
+ *   - 写入失败时清理临时文件并返回 false，由调用方决定重试时机；
+ *   - 权威写入时机是 SERVER_STOPPED（客户端释放锁之后，后台线程重试）。
  */
 object LangPackWriter {
     private const val ZH = "assets/cobblemon/lang/zh_cn.json"
     private const val EN = "assets/cobblemon/lang/en_us.json"
     private const val ZH_NS = "assets/cobblemoneditor/lang/zh_cn.json"
     private const val EN_NS = "assets/cobblemoneditor/lang/en_us.json"
+    private const val PACK_MCMETA = "pack.mcmeta"
+    private const val PACK_FORMAT = 34 // Minecraft 1.21.1 资源包格式
+    private const val MAX_RETRY = 30 // 后台同步最多重试次数（每次间隔 1 秒）
     private val gson = Gson()
 
-    /** 招式：名称键取 displayName；描述键取 desc（缺省回落 displayName）。 */
     fun writeMove(worldDir: Path, id: String, displayName: String, desc: String): Boolean {
         val zh = displayName.ifBlank { id }
-        val descVal = desc.ifBlank { zh }
+        val d = desc.ifBlank { zh }
         return updateZip(worldDir, mapOf(
-            ZH to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to descVal),
-            EN to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to descVal),
+            ZH to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to d),
+            EN to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to d),
         ))
     }
 
@@ -57,17 +64,16 @@ object LangPackWriter {
 
     /**
      * 全量同步：扫描数据包内所有已保存的招式/特性/精灵文件，重建全部 lang 条目。
-     * 在服务器启动时调用，让旧版本（0.2.x）保存的数据也能显示中文名，无需重新编辑。
+     * 返回是否已把世界资源包更新到位（内容无变化或写入成功都返回 true）。
      */
-    fun syncAll(worldDir: Path, packRoot: Path) {
+    fun syncAll(worldDir: Path, packRoot: Path): Boolean {
         val dataDir = packRoot.resolve("data").resolve(EditorCommands.PACK_ID)
         val common = mutableMapOf<String, String>()
         val species = mutableMapOf<String, String>()
         forEachFile(dataDir.resolve("moves"), "js") { name, text ->
             val zh = extractJsString(text, "shortDesc") ?: name
-            val desc = extractJsString(text, "desc") ?: zh
             common["cobblemon.move.$name"] = zh
-            common["cobblemon.move.$name.desc"] = desc
+            common["cobblemon.move.$name.desc"] = extractJsString(text, "desc") ?: zh
         }
         forEachFile(dataDir.resolve("abilities"), "js") { name, text ->
             val zh = extractJsString(text, "shortDesc") ?: name
@@ -78,13 +84,33 @@ object LangPackWriter {
         forEachFile(dataDir.resolve("species"), "json") { name, text ->
             species["cobblemoneditor.species.$name.name"] = extractJsonString(text, "name") ?: name
         }
-        if (common.isEmpty() && species.isEmpty()) return
-        updateZip(worldDir, mapOf(
+        return updateZip(worldDir, mapOf(
             ZH to common,
             EN to common,
             ZH_NS to species,
             EN_NS to species,
         ))
+    }
+
+    /**
+     * 后台线程反复尝试 syncAll：世界退出后客户端会释放 resources.zip 的文件锁，
+     * 趁隙写入（每次间隔 1 秒，最多 30 次）。用于 SERVER_STOPPED。
+     */
+    fun syncInBackground(worldDir: Path, packRoot: Path) {
+        val t = Thread({
+            var attempt = 0
+            while (attempt < MAX_RETRY) {
+                if (syncAll(worldDir, packRoot)) return@Thread
+                attempt++
+                try {
+                    Thread.sleep(1000)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+            }
+        }, "CobblemonEditor-LangSync")
+        t.isDaemon = true
+        t.start()
     }
 
     private fun forEachFile(dir: Path, ext: String, fn: (String, String) -> Unit) {
@@ -128,65 +154,118 @@ object LangPackWriter {
     }
 
     /**
-     * 合并写入 resources.zip：保留包内其它条目，仅替换/新增 lang 文件；
-     * 覆盖前把旧包备份为 resources.zip.bak-<epochMillis>。返回是否成功。
+     * 合并写入 resources.zip：
+     * - 保留包内其它条目，仅替换/新增 lang 文件（缺 pack.mcmeta 时补写）；
+     * - 合并结果与现包完全一致时不写文件（避免触发资源重载）；
+     * - 覆盖前把旧包备份为 resources.zip.bak-<epochMillis>；
+     * - 写入走临时文件 + 原子替换，替换失败最多重试 3 次（间隔 500ms），
+     *   失败时清理临时文件并返回 false。
      */
     private fun updateZip(worldDir: Path, langUpdates: Map<String, Map<String, String>>): Boolean {
         val zipFile = worldDir.resolve("resources.zip")
-        val entries = LinkedHashMap<String, ByteArray>()
+        val tmpFile = worldDir.resolve("resources.zip.tmp")
         try {
-            if (Files.exists(zipFile)) {
-                ZipInputStream(Files.newInputStream(zipFile)).use { zis ->
-                    var e = zis.nextEntry
-                    while (e != null) {
-                        if (!e.isDirectory) entries[e.name] = zis.readBytes()
-                        zis.closeEntry()
-                        e = zis.nextEntry
-                    }
-                }
-            }
-            // 世界资源包必须带 pack.mcmeta，否则进入世界时提示"无法应用服务器资源包"
-            if (!entries.containsKey("pack.mcmeta")) {
-                entries["pack.mcmeta"] =
-                    "{\"pack\":{\"pack_format\":34,\"description\":\"Cobblemon Data Editor \u4e2d\u6587\u663e\u793a\"}}".toByteArray(Charsets.UTF_8)
-            }
+            // 清理上次失败遗留的临时文件
+            Files.deleteIfExists(tmpFile)
+            val existing = readZip(zipFile)
+            val merged = existing.toMutableMap()
             for ((entryName, updates) in langUpdates) {
                 if (updates.isEmpty()) continue
-                val old = entries[entryName]
-                val obj: JsonObject = if (old != null) {
-                    try {
-                        JsonParser.parseString(String(old, Charsets.UTF_8)).asJsonObject
-                    } catch (_: Exception) {
-                        JsonObject()
-                    }
-                } else {
-                    JsonObject()
-                }
+                val obj = parseLang(merged[entryName])
                 for ((k, v) in updates) obj.addProperty(k, v)
-                entries[entryName] = gson.toJson(obj).toByteArray(Charsets.UTF_8)
+                merged[entryName] = gson.toJson(obj).toByteArray(Charsets.UTF_8)
             }
+            if (!merged.containsKey(PACK_MCMETA)) {
+                merged[PACK_MCMETA] = """{"pack":{"pack_format":$PACK_FORMAT,"description":"Cobblemon Data Editor 中文显示"}}"""
+                    .toByteArray(Charsets.UTF_8)
+            }
+            if (existing.isNotEmpty() && zipUnchanged(existing, merged)) return true
             if (Files.exists(zipFile)) {
                 try {
                     Files.copy(zipFile, worldDir.resolve("resources.zip.bak-" + System.currentTimeMillis()), StandardCopyOption.REPLACE_EXISTING)
                 } catch (_: Exception) {
                 }
             }
-            val tmp = worldDir.resolve("resources.zip.tmp")
-            ZipOutputStream(Files.newOutputStream(tmp)).use { zos ->
-                for ((entryName, bytes) in entries) {
-                    zos.putNextEntry(ZipEntry(entryName))
-                    zos.write(bytes)
-                    zos.closeEntry()
+            writeZip(tmpFile, merged)
+            return if (moveWithRetry(tmpFile, zipFile)) {
+                true
+            } else {
+                try {
+                    Files.deleteIfExists(tmpFile)
+                } catch (_: Exception) {
                 }
+                false
             }
-            try {
-                Files.move(tmp, zipFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (_: Exception) {
-                Files.move(tmp, zipFile, StandardCopyOption.REPLACE_EXISTING)
-            }
-            return true
         } catch (_: Exception) {
+            try {
+                Files.deleteIfExists(tmpFile)
+            } catch (_: Exception) {
+            }
             return false
         }
+    }
+
+    private fun readZip(zipFile: Path): Map<String, ByteArray> {
+        if (!Files.exists(zipFile)) return emptyMap()
+        val entries = LinkedHashMap<String, ByteArray>()
+        ZipInputStream(Files.newInputStream(zipFile)).use { zis ->
+            var e = zis.nextEntry
+            while (e != null) {
+                if (!e.isDirectory) entries[e.name] = zis.readBytes()
+                zis.closeEntry()
+                e = zis.nextEntry
+            }
+        }
+        return entries
+    }
+
+    private fun writeZip(file: Path, entries: Map<String, ByteArray>) {
+        ZipOutputStream(Files.newOutputStream(file)).use { zos ->
+            for ((name, bytes) in entries) {
+                zos.putNextEntry(ZipEntry(name))
+                zos.write(bytes)
+                zos.closeEntry()
+            }
+        }
+    }
+
+    private fun parseLang(bytes: ByteArray?): JsonObject {
+        if (bytes == null) return JsonObject()
+        return try {
+            JsonParser.parseString(String(bytes, Charsets.UTF_8)).asJsonObject
+        } catch (_: Exception) {
+            JsonObject()
+        }
+    }
+
+    private fun zipUnchanged(a: Map<String, ByteArray>, b: Map<String, ByteArray>): Boolean {
+        if (a.size != b.size) return false
+        for ((k, v) in a) {
+            val other = b[k] ?: return false
+            if (!v.contentEquals(other)) return false
+        }
+        return true
+    }
+
+    private fun moveWithRetry(tmp: Path, target: Path): Boolean {
+        repeat(3) { i ->
+            try {
+                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                return true
+            } catch (_: Exception) {
+                try {
+                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING)
+                    return true
+                } catch (_: Exception) {
+                    if (i < 2) {
+                        try {
+                            Thread.sleep(500)
+                        } catch (_: InterruptedException) {
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 }

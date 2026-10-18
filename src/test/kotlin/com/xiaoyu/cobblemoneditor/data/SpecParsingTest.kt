@@ -139,4 +139,14 @@ class SpecParsingTest {
         assertNull(HeldItemSpecFactory.parse("b", "name=x&bricks=no_such_brick:1"))
         assertNull(HeldItemSpecFactory.parse("b", "name=x&bricks=residual_heal:abc"))
     }
+
+    // ---------- 事件处理器参数防呆（GraalVM strict mode 拒绝重复形参） ----------
+
+    @Test
+    fun `ability triggers have unique parameter names`() {
+        for (t in AbilityTrigger.entries) {
+            val names = t.params.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            assertEquals(names.size, names.toSet().size, "触发时机 ${t.handler} 的参数列表有重复形参: ${t.params}")
+        }
+    }
 }
