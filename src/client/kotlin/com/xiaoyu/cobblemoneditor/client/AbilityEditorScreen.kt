@@ -9,20 +9,28 @@ import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
+import java.util.Base64
 
 class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
 
     private val dropdowns = mutableListOf<Dropdown>()
     private val removeButtons = mutableListOf<Button>()
+    private val speciesList: List<Triple<String, String, String>> = ClientCatalogs.species()
     private lateinit var idBox: EditBox
     private lateinit var nameBox: EditBox
     private lateinit var descBox: EditBox
     private lateinit var paramsBox: EditBox
     private lateinit var brickDropdown: Dropdown
     private lateinit var presetDropdown: Dropdown
+    private lateinit var assignSearchBox: EditBox
+    private lateinit var assignSpeciesDropdown: Dropdown
+    private lateinit var assignSlotDropdown: Dropdown
     private var currentBrick = "start_boost"
     private val effects = mutableListOf<Pair<String, String>>()
     private val maxEffects = 6
+    private var assignSpecies = ""
+    private var assignSlot = ""
+    private var lastAssignSearch = ""
 
     // 标签列（窄）在左，控件列在右，互不重叠
     private val labelX get() = width / 2 - 160
@@ -44,13 +52,25 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         }
         addRenderableWidget(brickDropdown); dropdowns.add(brickDropdown)
 
-        paramsBox = EditBox(this.font, bx, 140, 150, 16, Component.empty()); paramsBox.setMaxLength(100)
+        paramsBox = EditBox(this.font, bx, 140, 150, 16, Component.empty()); paramsBox.setMaxLength(4000)
         addRenderableWidget(paramsBox)
         rebuildPresets()
 
         addRenderableWidget(Button.builder(Component.literal("+ 添加")) { addEffect() }.bounds(bx + 160, 140, 54, 16).build())
 
         rebuildRemoveButtons()
+
+        // 赋予精灵：把当前特性加入选中精灵的特性池
+        assignSearchBox = EditBox(this.font, bx, 306, 56, 16, Component.empty()); assignSearchBox.setMaxLength(64)
+        assignSearchBox.setHint(Component.literal("搜索精灵"))
+        addRenderableWidget(assignSearchBox)
+        rebuildAssignSpeciesDropdown()
+        val slotLabels = listOf("特性1", "特性2", "隐藏特性")
+        val slotValues = listOf("", "", "h:")
+        assignSlotDropdown = Dropdown(bx + 146, 306, 60, 16, slotLabels, slotValues, 4) { assignSlot = it }
+        assignSlotDropdown.setSelectedByValue("")
+        addRenderableWidget(assignSlotDropdown); dropdowns.add(assignSlotDropdown)
+        addRenderableWidget(Button.builder(Component.literal("赋予")) { assignToSpecies() }.bounds(bx + 212, 306, 44, 16).build())
 
         val by = height - 32
         addRenderableWidget(Button.builder(Component.literal("保存")) { save() }.bounds(left, by, 68, 20).build())
@@ -83,7 +103,10 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         if (effects.size >= maxEffects) { msg("最多添加 $maxEffects 条效果"); return }
         val brick = AbilityEffects.byId(currentBrick) ?: return
         val raw = paramsBox.value.trim()
-        val params = if (raw.isEmpty()) emptyList() else raw.split(':').map { it.trim() }
+        // 自定义 JS 整段作为一个参数（不按冒号切分）
+        val params = if (raw.isEmpty()) emptyList()
+            else if (brick.id == "raw_effect") listOf(raw)
+            else raw.split(':').map { it.trim() }
         if (!validateBrickParams(brick.paramHints, params)) {
             msg("参数不完整或格式错误（" + brick.paramHints.joinToString("/") + "）；示例：" + brick.presets.firstOrNull()?.first.orEmpty())
             return
@@ -96,6 +119,34 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         if (i in effects.indices) { effects.removeAt(i); rebuildRemoveButtons() }
     }
 
+    private fun filteredAssignSpecies(): List<Triple<String, String, String>> {
+        val q = assignSearchBox.value.trim().lowercase()
+        if (q.isEmpty()) return speciesList
+        return speciesList.filter { (id, en, zh) -> id.contains(q) || en.lowercase().contains(q) || zh.contains(q) }
+    }
+
+    private fun rebuildAssignSpeciesDropdown() {
+        if (::assignSpeciesDropdown.isInitialized) removeWidget(assignSpeciesDropdown)
+        val f = filteredAssignSpecies()
+        if (f.isEmpty()) return
+        if (f.none { it.first == assignSpecies }) assignSpecies = f[0].first
+        assignSpeciesDropdown = Dropdown(fieldX + 62, 306, 78, 16, f.map { it.third }, f.map { it.first }, 8) { assignSpecies = it }
+        assignSpeciesDropdown.setSelectedByValue(assignSpecies)
+        addRenderableWidget(assignSpeciesDropdown); dropdowns.add(assignSpeciesDropdown)
+    }
+
+    /** 把当前特性加入选中精灵的特性池（服务端合并语义）。 */
+    private fun assignToSpecies() {
+        val abilityId = idBox.value.trim().lowercase()
+        if (abilityId.isEmpty()) { msg("请先填写特性 id（英文）"); return }
+        if (!abilityId.matches(Regex("[a-z0-9_]+"))) { msg("特性 id 只能用小写英文/数字/下划线"); return }
+        if (assignSpecies.isEmpty()) { msg("请选择要赋予的精灵"); return }
+        val player = Minecraft.getInstance().player
+        if (player == null) { msg("未连接服务器"); return }
+        player.connection.sendCommand("cobbleeditor set " + assignSpecies + " abilities=" + assignSlot + abilityId)
+        msg("已把 $abilityId 加入 $assignSpecies 的特性池（$assignSlot$abilityId），重进世界后生效")
+    }
+
     private fun save() {
         val id = idBox.value.trim().lowercase()
         if (id.isEmpty()) { msg("请填写 id（英文）"); return }
@@ -103,7 +154,12 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=" + desc)
         if (effects.isNotEmpty()) {
-            parts.add("effects=" + effects.joinToString("|") { (b, p) -> b + (if (p.isEmpty()) "" else ":" + p) })
+            parts.add("effects=" + effects.joinToString("|") { (b, p) ->
+                if (p.isEmpty()) b else {
+                    // 自定义 JS 参数 base64 编码（URL 安全无填充），防止冒号/竖线破坏 spec 语法
+                    b + ":" + if (b == "raw_effect") encodeRaw(p) else p
+                }
+            })
         }
         if (parts.isEmpty()) { msg("至少填一项内容"); return }
         val spec = parts.joinToString("&")
@@ -114,6 +170,13 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     }
 
     private fun msg(s: String) { Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false) }
+
+    private fun encodeRaw(s: String): String = Base64.getUrlEncoder().withoutPadding().encodeToString(s.toByteArray(Charsets.UTF_8))
+
+    override fun tick() {
+        val q = assignSearchBox.value.trim().lowercase()
+        if (q != lastAssignSearch) { lastAssignSearch = q; rebuildAssignSpeciesDropdown() }
+    }
 
     override fun mouseClicked(mx: Double, my: Double, button: Int): Boolean {
         for (d in dropdowns) if (d.open) { d.handleExpandedClick(mx, my); return true }
@@ -136,6 +199,7 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         g.drawString(this.font, "效果:", left, 122, 0xAAAAAA)
         g.drawString(this.font, "参数:", left, 144, 0xAAAAAA)
         g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 168, 0xAAAAAA)
+        g.drawString(this.font, "赋予:", left, 310, 0xAAAAAA)
         effects.forEachIndexed { i, (b, params) ->
             val brick = AbilityEffects.byId(b)
             val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")

@@ -1,5 +1,7 @@
 package com.xiaoyu.cobblemoneditor.data
 
+import java.util.Base64
+
 data class ParsedBrick(val brick: EffectBrick, val params: List<String>)
 
 data class MoveSpec(
@@ -14,6 +16,7 @@ data class MoveSpec(
     val target: String,
     val flags: List<String>,
     val bricks: List<ParsedBrick>,
+    val desc: String = "",
 )
 
 object MoveSpecFactory {
@@ -31,6 +34,7 @@ object MoveSpecFactory {
         val id = m["id"] ?: return null
         if (!id.matches(Regex("[a-z0-9_]+"))) return null
         val name = m["name"] ?: id
+        val desc = m["desc"] ?: ""
         val type = (m["type"] ?: "normal").lowercase()
         val category = (m["category"] ?: "physical").lowercase()
         if (category !in CATEGORIES) return null
@@ -47,11 +51,13 @@ object MoveSpecFactory {
             if (t2.isEmpty()) return@forEach
             val parts = t2.split(':')
             val brick = EffectBricks.byId(parts[0].trim()) ?: return null
-            val params = parts.drop(1).map { it.trim() }
+            val rawParams = parts.drop(1).map { it.trim() }
+            // 自定义 JS 参数走 base64（URL 安全、无填充），避免 JS 里的冒号/竖线破坏 spec 语法
+            val params = if (brick.kind == MoveBrickKind.RAW_HANDLER) rawParams.map { decodeRaw(it) } else rawParams
             if (!validateBrickParams(brick.paramHints, params)) return null
             bricks.add(ParsedBrick(brick, params))
         }
-        return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks)
+        return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks, desc)
     }
 
     /** 裸对象字面量。name 必须 ASCII；中文放 shortDesc；多条 secondary 合并成 secondaries。 */
@@ -70,13 +76,19 @@ object MoveSpecFactory {
         fields.add("flags: " + renderFlags(m.flags))
         val zh = esc(if (m.displayName.isNotEmpty() && m.displayName != m.id) m.displayName else "")
         if (zh.isNotEmpty()) fields.add("shortDesc: " + '"' + zh + '"')
+        // desc：招式描述（Showdown 数据里招式都有 desc 字段）
+        val descVal = if (m.desc.isNotBlank()) m.desc else if (zh.isNotEmpty()) zh else m.id
+        fields.add("desc: " + '"' + esc(descVal) + '"')
 
         val secondaries = ArrayList<String>()
         for (b in m.bricks) {
+            // {MOVEID} 占位符：允许积木引用招式自身 id（如自定义陷阱 sideCondition 必须指向已注册招式 id）
+            val rendered = b.brick.render(b.params).replace("{MOVEID}", m.id)
             when (b.brick.kind) {
-                MoveBrickKind.FIELD -> fields.add(b.brick.render(b.params))
-                MoveBrickKind.HANDLER -> fields.add(b.brick.render(b.params))
-                MoveBrickKind.SECONDARY -> secondaries.add(b.brick.render(b.params))
+                MoveBrickKind.FIELD -> fields.add(rendered)
+                MoveBrickKind.HANDLER -> fields.add(rendered)
+                MoveBrickKind.RAW_HANDLER -> fields.add(rendered)
+                MoveBrickKind.SECONDARY -> secondaries.add(rendered)
             }
         }
         if (secondaries.size == 1) fields.add("secondary: " + secondaries[0])
@@ -91,4 +103,7 @@ object MoveSpecFactory {
 
     private fun esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ")
+
+    private fun decodeRaw(s: String): String =
+        try { String(Base64.getUrlDecoder().decode(s), Charsets.UTF_8) } catch (_: Exception) { s }
 }

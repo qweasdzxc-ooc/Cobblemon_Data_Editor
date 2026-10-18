@@ -1,11 +1,14 @@
 package com.xiaoyu.cobblemoneditor.server
 
 import com.mojang.brigadier.arguments.StringArgumentType
+import com.cobblemon.mod.common.CobblemonItemComponents
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
+import com.cobblemon.mod.common.item.components.HeldItemEffectComponent
 import com.cobblemon.mod.common.pokemon.Species
 import com.xiaoyu.cobblemoneditor.data.AbilityPoolMerger
 import com.xiaoyu.cobblemoneditor.data.AbilitySpecFactory
 import com.xiaoyu.cobblemoneditor.data.DatapackWriter
+import com.xiaoyu.cobblemoneditor.data.HeldItemSpecFactory
 import com.xiaoyu.cobblemoneditor.data.LearnsetMerger
 import com.xiaoyu.cobblemoneditor.data.MoveSpecFactory
 import com.xiaoyu.cobblemoneditor.data.SpeciesFactory
@@ -13,8 +16,10 @@ import com.xiaoyu.cobblemoneditor.data.SpeciesPatch
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.storage.LevelResource
 
 object EditorCommands {
@@ -77,7 +82,33 @@ object EditorCommands {
                         )
                 )
 
-            dispatcher.register(root.then(setCmd).then(speciesCmd).then(moveCmd).then(abilityCmd))
+            val itemCmd = Commands.literal("item")
+                .then(
+                    Commands.literal("add")
+                        .then(
+                            Commands.argument("id", StringArgumentType.word())
+                                .then(
+                                    Commands.argument("spec", StringArgumentType.greedyString())
+                                        .executes { ctx ->
+                                            runItemAdd(ctx.source, StringArgumentType.getString(ctx, "id"), StringArgumentType.getString(ctx, "spec"))
+                                        }
+                                )
+                        )
+                )
+                .then(
+                    Commands.literal("give")
+                        .then(
+                            Commands.argument("effectId", StringArgumentType.word())
+                                .then(
+                                    Commands.argument("itemId", StringArgumentType.word())
+                                        .executes { ctx ->
+                                            runItemGive(ctx.source, StringArgumentType.getString(ctx, "effectId"), StringArgumentType.getString(ctx, "itemId"))
+                                        }
+                                )
+                        )
+                )
+
+            dispatcher.register(root.then(setCmd).then(speciesCmd).then(moveCmd).then(abilityCmd).then(itemCmd))
         }
     }
 
@@ -159,7 +190,7 @@ object EditorCommands {
         return when (val r = DatapackWriter.writeMove(packRoot(source), PACK_ID, move.id, js)) {
             is DatapackWriter.Result.Written -> {
                 var note = ""
-                if (LangPackWriter.writeMove(worldDir(source), move.id, move.displayName)) {
+                if (LangPackWriter.writeMove(worldDir(source), move.id, move.displayName, move.desc)) {
                     note += "（显示名已写入世界资源包）"
                 }
                 if (ConflictChecker.moveNameTaken(move.id)) note += " ⚠ 已有同名招式，重进世界后本次保存将覆盖其数据"
@@ -195,6 +226,47 @@ object EditorCommands {
                 source.sendFailure(Component.literal("写入失败: ${r.message}"))
                 0
             }
+        }
+    }
+
+    private fun runItemAdd(source: CommandSourceStack, id: String, spec: String): Int {
+        val item = HeldItemSpecFactory.parse(id, spec)
+        if (item == null) {
+            source.sendFailure(Component.literal("道具参数无效。用法: /cobbleeditor item add <id> name=...&desc=...[&bricks=residual_heal:16|start_boost:atk:1|...]"))
+            return 0
+        }
+        val js = HeldItemSpecFactory.renderJs(item)
+        return when (val r = DatapackWriter.writeHeldItem(packRoot(source), PACK_ID, item.id, js)) {
+            is DatapackWriter.Result.Written -> {
+                source.sendSuccess({ Component.literal("已保存道具效果 ${item.id}，重进世界后生效。用 /cobbleeditor item give ${item.id} <物品id> 把效果绑定到物品。 文件: ${r.path}") }, false)
+                1
+            }
+            is DatapackWriter.Result.Failed -> {
+                source.sendFailure(Component.literal("写入失败: ${r.message}"))
+                0
+            }
+        }
+    }
+
+    private fun runItemGive(source: CommandSourceStack, effectId: String, itemId: String): Int {
+        if (!effectId.matches(Regex("[a-z0-9]+"))) {
+            source.sendFailure(Component.literal("道具效果 id 无效（仅小写字母数字）"))
+            return 0
+        }
+        val item = BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(itemId)).orElse(null)
+        if (item == null) {
+            source.sendFailure(Component.literal("物品 $itemId 不存在（示例: minecraft:diamond）"))
+            return 0
+        }
+        return try {
+            val stack = ItemStack(item)
+            stack.set(CobblemonItemComponents.HELD_ITEM_EFFECT, HeldItemEffectComponent(effectId, false))
+            source.playerOrException.addItem(stack)
+            source.sendSuccess({ Component.literal("已获得 1 个绑定效果 $effectId 的 $itemId（放进精灵携带槽后生效）") }, false)
+            1
+        } catch (e: Exception) {
+            source.sendFailure(Component.literal("给予失败（需要玩家执行）: ${e.message}"))
+            0
         }
     }
 }

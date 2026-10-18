@@ -1,6 +1,10 @@
 package com.xiaoyu.cobblemoneditor.client
 
+import com.cobblemon.mod.common.api.Priority
 import com.cobblemon.mod.common.api.pokemon.PokemonSpecies
+import com.cobblemon.mod.common.api.pokemon.stats.Stats
+import com.cobblemon.mod.common.api.types.ElementalType
+import com.cobblemon.mod.common.pokemon.Species
 import com.xiaoyu.cobblemoneditor.client.widget.Dropdown
 import com.xiaoyu.cobblemoneditor.data.TypeCatalog
 import net.minecraft.client.Minecraft
@@ -83,7 +87,9 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         movesBox.setMaxLength(2048)
         movesBox.setHint(Component.literal("1:tackle|5:growl|egg:xx|tm:yy"))
         addRenderableWidget(movesBox)
-        movesBox.value = currentLearnset()
+
+        // 初始选中第一个精灵：预填它的六维/属性/特性/学习表
+        onSpeciesChanged()
 
         // 按钮
         val by = height - 28
@@ -98,18 +104,49 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         return speciesList.filter { (id, en, zh) -> id.contains(q) || en.lowercase().contains(q) || zh.contains(q) }
     }
 
-    /** 切换精灵时清空全部编辑状态，防止上一个精灵的修改泄漏到新精灵上。 */
+    private fun currentSpecies(): Species? =
+        PokemonSpecies.implemented.find { it.resourceIdentifier.path == speciesId }
+
+    /**
+     * 切换精灵时：六维/属性/特性/学习表全部预填为该精灵的当前值
+     * （用户要求"选择的精灵显示已有的六维、特性、属性"）。
+     */
     private fun onSpeciesChanged() {
-        if (::movesBox.isInitialized) movesBox.value = currentLearnset()
-        for (box in statBoxes.values) box.value = ""
-        type1 = ""; type2 = ""
+        val s = currentSpecies()
+        for ((k, box) in statBoxes) box.value = s?.baseStats?.get(statByKey(k))?.toString() ?: ""
+        type1 = typeValue(s?.primaryType); type2 = typeValue(s?.secondaryType)
         if (::typeDropdown1.isInitialized) {
-            typeDropdown1.setSelectedByValue(""); typeDropdown2.setSelectedByValue("")
+            typeDropdown1.setSelectedByValue(type1); typeDropdown2.setSelectedByValue(type2)
         }
-        ability1 = ""; ability2 = ""; hiddenAbility = ""
-        if (::abilityDropdown1.isInitialized) {
-            abilityDropdown1.setSelectedByValue(""); abilityDropdown2.setSelectedByValue(""); abilityDropdown3.setSelectedByValue("")
+        val ab = currentAbilities(s)
+        ability1 = ab.first.getOrNull(0) ?: ""; ability2 = ab.first.getOrNull(1) ?: ""; hiddenAbility = ab.second.getOrNull(0) ?: ""
+        if (::abilityDropdown1.isInitialized) rebuildAbilityDropdowns()
+        if (::movesBox.isInitialized) movesBox.value = currentLearnset()
+    }
+
+    private fun statByKey(k: String): Stats = when (k) {
+        "hp" -> Stats.HP; "attack" -> Stats.ATTACK; "defence" -> Stats.DEFENCE
+        "special_attack" -> Stats.SPECIAL_ATTACK; "special_defence" -> Stats.SPECIAL_DEFENCE
+        else -> Stats.SPEED
+    }
+
+    /** ElementalType -> 数据包小写键（与 TypeCatalog 一致）。 */
+    private fun typeValue(t: ElementalType?): String {
+        if (t == null) return ""
+        val n = t.name
+        if (TypeCatalog.TYPES.any { it.first == n }) return n
+        return t.showdownId.lowercase()
+    }
+
+    /** 读 AbilityPool：第一个列表=常驻特性(≤2)，第二个=隐藏特性(≤1)。 */
+    private fun currentAbilities(s: Species?): Pair<List<String>, List<String>> {
+        if (s == null) return emptyList<String>() to emptyList<String>()
+        val normal = mutableListOf<String>(); val hidden = mutableListOf<String>()
+        for (pa in s.abilities) {
+            val n = pa.template.name
+            if (pa.priority == Priority.LOW) hidden.add(n) else normal.add(n)
         }
+        return normal.take(2) to hidden.take(1)
     }
 
     private fun rebuildSpeciesDropdown() {
@@ -148,11 +185,14 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         if (::abilityDropdown2.isInitialized) removeWidget(abilityDropdown2)
         if (::abilityDropdown3.isInitialized) removeWidget(abilityDropdown3)
         val f = filteredAbilities()
-        val labels = listOf("不改") + f.map { it.second }
-        val values = listOf("") + f.map { it.first }
-        if (ability1.isNotEmpty() && f.none { it.first == ability1 }) ability1 = ""
-        if (ability2.isNotEmpty() && f.none { it.first == ability2 }) ability2 = ""
-        if (hiddenAbility.isNotEmpty() && f.none { it.first == hiddenAbility }) hiddenAbility = ""
+        // 修复：已确认的特性即使不在当前搜索结果里也保留在下拉列表中，
+        // 避免"再搜索时已确认的特性全部跳回【不改】"。
+        val confirmed = listOf(ability1, ability2, hiddenAbility).filter { it.isNotEmpty() }
+        val extra = confirmed.filter { c -> f.none { it.first == c } }
+            .map { c -> abilitiesList.firstOrNull { it.first == c } ?: (c to c) }
+        val all = f + extra
+        val labels = listOf("不改") + all.map { it.second }
+        val values = listOf("") + all.map { it.first }
         abilityDropdown1 = Dropdown(fieldX, 152, 100, 14, labels, values, 10) { ability1 = it }
         abilityDropdown1.setSelectedByValue(ability1)
         addRenderableWidget(abilityDropdown1); dropdowns.add(abilityDropdown1)

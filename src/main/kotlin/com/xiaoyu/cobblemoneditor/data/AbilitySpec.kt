@@ -1,5 +1,7 @@
 package com.xiaoyu.cobblemoneditor.data
 
+import java.util.Base64
+
 data class ParsedAbilityEffect(val brick: AbilityEffectBrick, val params: List<String>)
 
 data class AbilitySpec(
@@ -29,7 +31,9 @@ object AbilitySpecFactory {
             if (t2.isEmpty()) return@forEach
             val parts = t2.split(':')
             val brick = AbilityEffects.byId(parts[0].trim()) ?: return null
-            val params = parts.drop(1).map { it.trim() }
+            val rawParams = parts.drop(1).map { it.trim() }
+            // 自定义 JS 参数走 base64（URL 安全、无填充），避免 JS 里的冒号/竖线破坏 spec 语法
+            val params = if (brick.id == "raw_effect") rawParams.map { decodeRaw(it) } else rawParams
             if (!validateBrickParams(brick.paramHints, params)) return null
             effects.add(ParsedAbilityEffect(brick, params))
         }
@@ -42,8 +46,13 @@ object AbilitySpecFactory {
      * 中文显示名放 shortDesc；多条同名事件处理器按触发时机合并成一个函数体。
      */
     fun renderJs(a: AbilitySpec): String {
+        // raw_effect 是"完整 JS 成员"（可能含多个事件处理器），必须整体放在对象层，
+        // 不能并进按触发时机合并的 handler 函数体（否则变成嵌套函数定义）。
         val byTrigger = LinkedHashMap<AbilityTrigger, MutableList<ParsedAbilityEffect>>()
-        for (e in a.effects) byTrigger.getOrPut(e.brick.trigger) { mutableListOf() }.add(e)
+        for (e in a.effects) {
+            if (e.brick.id == "raw_effect") continue
+            byTrigger.getOrPut(e.brick.trigger) { mutableListOf() }.add(e)
+        }
 
         val members = ArrayList<String>()
         members.add("name: " + '"' + a.id + '"')
@@ -57,9 +66,15 @@ object AbilitySpecFactory {
             val body = list.joinToString(" ") { it.brick.action(it.params) }
             members.add(trigger.handler + "(" + trigger.params + ") { " + body + " }")
         }
+        for (e in a.effects) {
+            if (e.brick.id == "raw_effect") members.add(e.brick.action(e.params))
+        }
         return "{ " + members.joinToString(", ") + " }"
     }
 
     private fun esc(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", " ")
+
+    private fun decodeRaw(s: String): String =
+        try { String(Base64.getUrlDecoder().decode(s), Charsets.UTF_8) } catch (_: Exception) { s }
 }

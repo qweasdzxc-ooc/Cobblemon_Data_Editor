@@ -1,7 +1,7 @@
 package com.xiaoyu.cobblemoneditor.data
 
 /** 招式积木类型：决定 render 结果如何拼进招式对象字面量。 */
-enum class MoveBrickKind { FIELD, SECONDARY, HANDLER }
+enum class MoveBrickKind { FIELD, SECONDARY, HANDLER, RAW_HANDLER }
 
 /**
  * 校验积木参数是否合法：个数必须与 paramHints 完全一致；
@@ -23,6 +23,7 @@ fun validateBrickParams(hints: List<String>, params: List<String>): Boolean {
  * - FIELD：render 返回完整 "key: value" 片段
  * - SECONDARY：render 返回 "{...}" 值片段，多个会合并成 secondaries 数组
  * - HANDLER：render 返回 "handler(...) {...}" 完整事件处理器
+ * - RAW_HANDLER：render 原样返回参数内容（用户输入含函数签名的完整 JS 处理器）
  */
 data class EffectBrick(
     val id: String,
@@ -74,8 +75,9 @@ object EffectBricks {
         EffectBrick("terrain_set", "改变场地", listOf("场地"),
             listOf("electricterrain" to "电气场地", "grassyterrain" to "青草场地", "mistyterrain" to "薄雾场地", "psychicterrain" to "精神场地"),
             MoveBrickKind.FIELD, { p -> "terrain: '" + p[0] + "'" }),
-        EffectBrick("side_condition", "场地保护状态", listOf("状态"),
-            listOf("reflect" to "反射壁", "lightscreen" to "光墙", "safeguard" to "神秘守护", "mist" to "白雾"),
+        EffectBrick("side_condition", "场地状态(保护/陷阱)", listOf("状态"),
+            listOf("reflect" to "反射壁", "lightscreen" to "光墙", "safeguard" to "神秘守护", "mist" to "白雾", "auroraveil" to "极光幕",
+                "spikes" to "撒菱", "toxicspikes" to "毒菱", "stealthrock" to "隐形岩", "stickyweb" to "粘粘网"),
             MoveBrickKind.FIELD, { p -> "sideCondition: '" + p[0] + "'" }),
         EffectBrick("crit_ratio", "会心等级", listOf("会心等级(2=易会心,3=极会心)"),
             listOf("1" to "普通(1/24)", "2" to "易会心(1/8)", "3" to "极会心(1/2)"),
@@ -119,6 +121,83 @@ object EffectBricks {
 					pokemon.clearBoosts();
 				}
 			}""" }),
+        EffectBrick("foe_stat_reset", "清除对手强化", listOf(),
+            listOf("" to "清除之烟(清除目标强化)"),
+            MoveBrickKind.HANDLER, { _ -> """onHit(target) {
+				target.clearBoosts();
+				this.add("-clearboost", target);
+			}""" }),
+        EffectBrick("stat_swap", "交换双攻强化", listOf(),
+            listOf("" to "力量交换(交换物攻特攻强化)"),
+            MoveBrickKind.HANDLER, { _ -> """onHit(target, source) {
+				const targetBoosts = {};
+				const sourceBoosts = {};
+				const atkSpa = ['atk', 'spa'];
+				for (const stat of atkSpa) {
+					targetBoosts[stat] = target.boosts[stat];
+					sourceBoosts[stat] = source.boosts[stat];
+				}
+				source.setBoost(targetBoosts);
+				target.setBoost(sourceBoosts);
+				this.add("-swapboost", source, target, 'atk, spa', '[from] move: Power Swap');
+			}""" }),
+        EffectBrick("stat_copy", "复制对手强化", listOf(),
+            listOf("" to "自我暗示(复制对手能力变化)"),
+            MoveBrickKind.HANDLER, { _ -> """onHit(target, source) {
+				let i;
+				for (i in target.boosts) {
+					source.boosts[i] = target.boosts[i];
+				}
+				this.add("-copyboost", source, target, '[from] move: Psych Up');
+			}""" }),
+        EffectBrick("hazard_spikes", "设置自定义陷阱", listOf("陷阱显示名", "每层伤害分母(8=1/8)"),
+            listOf("Spikes:8" to "撒菱(1/8)", "Stealth Rock:8" to "岩钉(1/8)", "Toxic Spikes:8" to "毒菱(1/8)", "Sticky Web:8" to "粘网(1/8)"),
+            MoveBrickKind.FIELD, { p -> """sideCondition: '{MOVEID}',
+			condition: {
+				onSideStart(side) { this.add("-sidestart", side, '${p[0]}'); this.effectState.layers = 1; },
+				onSideRestart(side) { if (this.effectState.layers >= 3) return false; this.add("-sidestart", side, '${p[0]}'); this.effectState.layers++; },
+				onSwitchIn(pokemon) { if (!pokemon.isGrounded()) return; this.damage(pokemon.baseMaxhp / ${p[1]} * this.effectState.layers); }
+			}""" }),
+        EffectBrick("hazard_clear", "清除场地障碍", listOf(),
+            listOf("" to "清除浓雾(清除全场场地状态)"),
+            MoveBrickKind.HANDLER, { _ -> """onHit(target, source, move) {
+				const removeTarget = ['reflect', 'lightscreen', 'auroraveil', 'safeguard', 'mist', 'spikes', 'toxicspikes', 'stealthrock', 'stickyweb'];
+				for (const targetCondition of removeTarget) {
+					if (target.side.removeSideCondition(targetCondition)) {
+						this.add("-sideend", target.side, this.dex.conditions.get(targetCondition).name, '[from] move: Defog', '[of] ' + source);
+					}
+				}
+				this.field.clearTerrain();
+			}""" }),
+        EffectBrick("self_heal_status", "治愈自身异常", listOf("回复分母(2=1/2)"),
+            listOf("2" to "治愈异常并回复50%", "4" to "治愈异常并回复25%"),
+            MoveBrickKind.HANDLER, { p -> """onHit(target, source) {
+				if (!source.status) return false;
+				source.cureStatus();
+				this.heal(source.baseMaxhp / """ + p[0] + """, source);
+			}""" }),
+        EffectBrick("sacrifice_move", "自爆", listOf(),
+            listOf("" to "大爆炸(使用后自身濒死)"),
+            MoveBrickKind.FIELD, { "selfdestruct: 'always'" }),
+        EffectBrick("mind_blown", "惊爆反噬", listOf(),
+            listOf("" to "惊爆大头(使用后损失一半HP)"),
+            MoveBrickKind.FIELD, { "mindBlownRecoil: true" }),
+        EffectBrick("will_crit", "必定会心", listOf(),
+            listOf("" to "冰息/山岚摔(必定会心)"),
+            MoveBrickKind.FIELD, { "willCrit: true" }),
+        EffectBrick("smart_target", "智能目标", listOf(),
+            listOf("" to "巨龙双箭(每击可重新瞄准)"),
+            MoveBrickKind.FIELD, { "smartTarget: true" }),
+        EffectBrick("thaws_target", "解除冰冻", listOf(),
+            listOf("" to "热水(解除目标冰冻)"),
+            MoveBrickKind.FIELD, { "thawsTarget: true" }),
+        EffectBrick("raw_handler", "自定义JS", listOf("完整JS(含函数签名)"),
+            listOf(
+                "onTryHit(target, source, move) { if (move.type === 'Ground') { this.add('-immune', target); return null; } }" to "免疫地面系",
+                "onBasePower(basePower, attacker, defender, move) { return this.chainModify(1.5); }" to "威力×1.5",
+                "onHit(target, source, move) { this.heal(source.baseMaxhp / 2, source); }" to "命中回复50%",
+            ),
+            MoveBrickKind.RAW_HANDLER, { p -> p[0] }),
     )
 
     fun byId(id: String): EffectBrick? = ALL.firstOrNull { it.id == id }

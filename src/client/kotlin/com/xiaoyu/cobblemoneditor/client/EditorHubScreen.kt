@@ -11,11 +11,12 @@ class EditorHubScreen : Screen(Component.literal("Cobblemon Data Editor")) {
     override fun init() {
         val cx = width / 2 - 120
         val w = 240
-        addRenderableWidget(Button.builder(Component.literal("精灵 · 编辑（种族值/属性/特性）")) { Minecraft.getInstance().setScreen(EditorScreen()) }.bounds(cx, 52, w, 22).build())
-        addRenderableWidget(Button.builder(Component.literal("精灵 · 新建")) { Minecraft.getInstance().setScreen(NewSpeciesScreen()) }.bounds(cx, 80, w, 22).build())
-        addRenderableWidget(Button.builder(Component.literal("招式 · 编辑器")) { Minecraft.getInstance().setScreen(MoveEditorScreen()) }.bounds(cx, 108, w, 22).build())
-        addRenderableWidget(Button.builder(Component.literal("特性 · 编辑器")) { Minecraft.getInstance().setScreen(AbilityEditorScreen()) }.bounds(cx, 136, w, 22).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(cx, 164, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("精灵 · 编辑（种族值/属性/特性）")) { Minecraft.getInstance().setScreen(EditorScreen()) }.bounds(cx, 48, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("精灵 · 新建")) { Minecraft.getInstance().setScreen(NewSpeciesScreen()) }.bounds(cx, 74, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("招式 · 编辑器")) { Minecraft.getInstance().setScreen(MoveEditorScreen()) }.bounds(cx, 100, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("特性 · 编辑器")) { Minecraft.getInstance().setScreen(AbilityEditorScreen()) }.bounds(cx, 126, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("道具 · 编辑器")) { Minecraft.getInstance().setScreen(HeldItemEditorScreen()) }.bounds(cx, 152, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(cx, 178, w, 22).build())
     }
 
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {

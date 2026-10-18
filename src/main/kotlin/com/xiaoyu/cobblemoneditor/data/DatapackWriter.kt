@@ -69,4 +69,7 @@ object DatapackWriter {
 
     fun writeAbility(packRoot: Path, namespace: String, abilityId: String, js: String): Result =
         writeWithBackup(packRoot, "data/$namespace/abilities", "$abilityId.js", js)
+
+    fun writeHeldItem(packRoot: Path, namespace: String, itemId: String, js: String): Result =
+        writeWithBackup(packRoot, "data/$namespace/held_items", "$itemId.js", js)
 }

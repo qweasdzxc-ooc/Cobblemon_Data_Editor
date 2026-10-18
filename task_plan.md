@@ -57,3 +57,11 @@
 ## 决策记录
 - 2026-10-18：工作流 A/B/C 获批；B 派给队友并行；构建验证统一由 Lead 做（避免 gradle 并发冲突）
 - 2026-10-18：新建物种放在本 mod 自有 namespace（cobblemoneditor），与现有 species_additions 一致
+
+## Phase 8：v0.3.3 用户测试反馈（6 项）
+1. 特性搜索重置 bug（EditorScreen 下拉重建丢已选值）
+2. 招式编辑器残留标签遮挡 + 招式描述字段（MoveSpec.desc + GUI + lang）
+3. 精灵编辑器预填六维/属性/特性；多属性：Cobblemon Species 仅 primaryType+secondaryType 两个槽（Species.kt:77/79），Showdown 引擎同样只支持≤2 属性 → 需向用户说明
+4. AbilityEditorScreen 增加"赋予精灵"（复用 set 命令 abilities= 合并）
+5. 携带道具：HeldItems 注册表 reload(data/cobblemon/held_items/*.js，Showdown 道具对象)；MC 物品经 HeldItemEffectComponent(showdownId, consumed) 绑定 → 效果编辑器 + 生成带组件物品 + 命令直发；待查 HeldItemCommand/Pokemon.heldItem/组件注册 id
+6. 积木库再扩充（队友）+ 自定义 JS 复杂效果（RAW 积木 + 多行输入）

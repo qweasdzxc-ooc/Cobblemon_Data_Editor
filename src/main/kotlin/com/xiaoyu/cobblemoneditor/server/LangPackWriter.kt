@@ -28,12 +28,13 @@ object LangPackWriter {
     private const val EN_NS = "assets/cobblemoneditor/lang/en_us.json"
     private val gson = Gson()
 
-    /** 招式：名称与描述都取 displayName（招式没有单独描述字段，shortDesc 即显示名）。 */
-    fun writeMove(worldDir: Path, id: String, displayName: String): Boolean {
+    /** 招式：名称键取 displayName；描述键取 desc（缺省回落 displayName）。 */
+    fun writeMove(worldDir: Path, id: String, displayName: String, desc: String): Boolean {
         val zh = displayName.ifBlank { id }
+        val descVal = desc.ifBlank { zh }
         return updateZip(worldDir, mapOf(
-            ZH to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to zh),
-            EN to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to zh),
+            ZH to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to descVal),
+            EN to mapOf("cobblemon.move.$id" to zh, "cobblemon.move.$id.desc" to descVal),
         ))
     }
 
@@ -64,8 +65,9 @@ object LangPackWriter {
         val species = mutableMapOf<String, String>()
         forEachFile(dataDir.resolve("moves"), "js") { name, text ->
             val zh = extractJsString(text, "shortDesc") ?: name
+            val desc = extractJsString(text, "desc") ?: zh
             common["cobblemon.move.$name"] = zh
-            common["cobblemon.move.$name.desc"] = zh
+            common["cobblemon.move.$name.desc"] = desc
         }
         forEachFile(dataDir.resolve("abilities"), "js") { name, text ->
             val zh = extractJsString(text, "shortDesc") ?: name
