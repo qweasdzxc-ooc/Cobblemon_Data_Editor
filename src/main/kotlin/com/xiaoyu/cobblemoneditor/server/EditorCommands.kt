@@ -84,6 +84,8 @@ object EditorCommands {
     private fun packRoot(source: CommandSourceStack) =
         source.server.getWorldPath(LevelResource.ROOT).resolve("datapacks").resolve(PACK_ID)
 
+    private fun worldDir(source: CommandSourceStack) = source.server.getWorldPath(LevelResource.ROOT)
+
     private fun findSpecies(name: String): Species? =
         PokemonSpecies.getByName(name) ?: PokemonSpecies.getByIdentifier(ResourceLocation(PACK_ID, name))
 
@@ -131,6 +133,9 @@ object EditorCommands {
         return when (val r = DatapackWriter.writeSpecies(packRoot(source), PACK_ID, species.id, json)) {
             is DatapackWriter.Result.Written -> {
                 var note = ""
+                if (LangPackWriter.writeSpecies(worldDir(source), species.id, species.nameZh ?: species.name)) {
+                    note += "（显示名已写入世界资源包）"
+                }
                 ConflictChecker.dexTaken(species.dex)?.let { note += " ⚠ 图鉴号 ${species.dex} 已被 $it 占用，可能造成图鉴冲突" }
                 if (ConflictChecker.officialSpeciesNameTaken(species.id)) note += " ⚠ 名称与官方精灵同名（自制命名空间下不会覆盖官方数据）"
                 source.sendSuccess({ Component.literal("已创建新精灵 ${species.id}（图鉴号 ${species.dex}），重进世界后生效。$note 文件: ${r.path}") }, false)
@@ -153,7 +158,11 @@ object EditorCommands {
         val js = MoveSpecFactory.renderJs(move)
         return when (val r = DatapackWriter.writeMove(packRoot(source), PACK_ID, move.id, js)) {
             is DatapackWriter.Result.Written -> {
-                val note = if (ConflictChecker.moveNameTaken(move.id)) " ⚠ 已有同名招式，重进世界后本次保存将覆盖其数据" else ""
+                var note = ""
+                if (LangPackWriter.writeMove(worldDir(source), move.id, move.displayName)) {
+                    note += "（显示名已写入世界资源包）"
+                }
+                if (ConflictChecker.moveNameTaken(move.id)) note += " ⚠ 已有同名招式，重进世界后本次保存将覆盖其数据"
                 source.sendSuccess({ Component.literal("已保存招式 ${move.id}，重进世界后生效。$note 文件: ${r.path}") }, false)
                 1
             }
@@ -174,7 +183,11 @@ object EditorCommands {
         val js = AbilitySpecFactory.renderJs(ability)
         return when (val r = DatapackWriter.writeAbility(packRoot(source), PACK_ID, ability.id, js)) {
             is DatapackWriter.Result.Written -> {
-                val note = if (ConflictChecker.abilityNameTaken(ability.id)) " ⚠ 已有同名特性，重进世界后本次保存将覆盖其数据" else ""
+                var note = ""
+                if (LangPackWriter.writeAbility(worldDir(source), ability.id, ability.displayName, ability.description)) {
+                    note += "（显示名已写入世界资源包）"
+                }
+                if (ConflictChecker.abilityNameTaken(ability.id)) note += " ⚠ 已有同名特性，重进世界后本次保存将覆盖其数据"
                 source.sendSuccess({ Component.literal("已保存特性 ${ability.id}，重进世界后生效。$note 文件: ${r.path}") }, false)
                 1
             }

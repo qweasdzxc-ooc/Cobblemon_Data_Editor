@@ -59,3 +59,11 @@
 - 修复：EffectBrick.kt 新增共享 validateBrickParams(hints, params)（个数必须等于提示数；含"概率/级数/分母/次数/倍率/等级/会心/阈值/加成"关键词的槽位必须是数字）；MoveSpecFactory/AbilitySpecFactory.parse 强制校验；两个编辑器界面添加积木时即时校验并提示示例
 - 顺带收紧：MoveSpec parse 的 accuracy/pp/priority 非数字不再静默回落默认值而是拒绝
 - 构建 ✅（5s/3s 两轮），部署 174527B，commit fdd8bbd
+
+## 2026-10-18 Phase 7 用户实测反馈修复（v0.3.2）
+- 用户反馈：①界面输入框仍有文本遮挡（截图=精灵编辑器，选中妙蛙种子）②自制特性/招式游戏内显示 raw lang key（cobblemon.ability.mianyihuo / cobblemon.move.fengren），中文名与描述都不显示（数据包无法提供 lang，lang 属资源包）
+- 遮挡根因：render() 里 drawString 在 super.render 之后，部分标签画在输入框/下拉框上。修复：EditorScreen 属性2/特性2 标签移至下拉框之间（属性2 left+166、特性2 left+174，下拉宽度 110→100、第二个下拉右移 fieldX+132/fieldX+124）；NewSpeciesScreen 同型修复（属性2 left+166、特性2 left+174）；MoveEditorScreen 删除压在威力框上的"命中:"等三标签，改用 EditBox 占位提示（威力/命中/pp）；NewSpeciesScreen"来源:/等级:"两标签同样改占位提示
+- lang 修复：新增 server/LangPackWriter.kt —— 写世界根目录 resources.zip（Minecraft 世界自带资源包，进世界自动加载）：cobblemon.move.<id>(.desc) / cobblemon.ability.<id>(.desc) / cobblemoneditor.species.<id>.name，zh_cn+en_us 双写、合并保留包内其它条目、覆盖前备份 resources.zip.bak-<epoch>
+- EditorCommands 三命令保存成功后自动写入 lang（消息附"（显示名已写入世界资源包）"）；CobblemonEditor 注册 SERVER_STARTED → LangPackWriter.syncAll 全量扫描数据包重建 lang（旧版 0.2.x 数据无需重编辑即显示中文）
+- SpeciesFactory 新增 namezh= 键（中文显示名，≤32 字符，禁 , " \ |）；NewSpeciesScreen 新增中文名输入框（可选）
+- 待办：构建部署 0.3.2、向用户汇报并请求复测

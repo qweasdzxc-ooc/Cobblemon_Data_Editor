@@ -7,7 +7,8 @@ package com.xiaoyu.cobblemoneditor.data
  *   dex=9001,type1=electric,type2=flying,abilities=static|h:voltabsorb,moves=1:tackle|5:growl|egg:xxx|tm:yyy
  *
  * 必填：dex、type1/primaryType、abilities（≥1 个）。
- * 可选（带默认值）：name（缺省=id，ASCII）、type2/secondaryType、种族值 hp/atk/def/spa/spd/spe（缺省 50）、
+ * 可选（带默认值）：name（缺省=id，ASCII）、nameZh（中文显示名，写入世界资源包 lang）、
+ * type2/secondaryType、种族值 hp/atk/def/spa/spd/spe（缺省 50）、
  * moves（缺省 1:tackle）、catchRate(45)、maleRatio(0.5，-1=无性别)、height 米(1.0)、weight 千克(10.0)、
  * eggCycles(20)、eggGroups(monster)、experienceGroup(medium_fast)、baseExperienceYield(64)、
  * baseFriendship(50)、baseScale(1.0)。
@@ -24,6 +25,7 @@ object SpeciesFactory {
     data class NewSpecies(
         val id: String,
         val name: String,
+        val nameZh: String?,
         val dex: Int,
         val primaryType: String,
         val secondaryType: String?,
@@ -45,6 +47,7 @@ object SpeciesFactory {
     fun parse(id: String, spec: String): NewSpecies? {
         if (!id.matches(Regex("[a-z0-9_]+"))) return null
         var name: String? = null
+        var nameZh: String? = null
         var dex: Int? = null
         var primary: String? = null
         var secondary: String? = null
@@ -84,6 +87,12 @@ object SpeciesFactory {
                 key == "name" -> {
                     if (!value.matches(Regex("[A-Za-z][A-Za-z0-9]*"))) return null
                     name = value
+                }
+                key == "namezh" -> {
+                    if (value.isEmpty() || value.length > 32) return null
+                    // 逗号/引号/反斜杠/竖线会破坏命令与 JSON，控制字符不允许
+                    if (value.any { it == ',' || it == '"' || it == '\\' || it == '|' || it.isISOControl() }) return null
+                    nameZh = value
                 }
                 key == "type1" || key == "primarytype" -> {
                     val v = value.lowercase()
@@ -185,6 +194,7 @@ object SpeciesFactory {
         return NewSpecies(
             id = id,
             name = name ?: id,
+            nameZh = nameZh,
             dex = d,
             primaryType = p,
             secondaryType = secondary,

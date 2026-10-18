@@ -69,7 +69,7 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         val typeValues = listOf("") + TypeCatalog.TYPES.map { it.first }
         typeDropdown1 = Dropdown(fieldX, 112, 92, 14, typeLabels, typeValues, 10) { type1 = it }
         addRenderableWidget(typeDropdown1); dropdowns.add(typeDropdown1)
-        typeDropdown2 = Dropdown(fieldX + 110, 112, 92, 14, typeLabels, typeValues, 10) { type2 = it }
+        typeDropdown2 = Dropdown(fieldX + 124, 112, 92, 14, typeLabels, typeValues, 10) { type2 = it }
         addRenderableWidget(typeDropdown2); dropdowns.add(typeDropdown2)
 
         // 特性
@@ -153,10 +153,10 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         if (ability1.isNotEmpty() && f.none { it.first == ability1 }) ability1 = ""
         if (ability2.isNotEmpty() && f.none { it.first == ability2 }) ability2 = ""
         if (hiddenAbility.isNotEmpty() && f.none { it.first == hiddenAbility }) hiddenAbility = ""
-        abilityDropdown1 = Dropdown(fieldX, 152, 110, 14, labels, values, 10) { ability1 = it }
+        abilityDropdown1 = Dropdown(fieldX, 152, 100, 14, labels, values, 10) { ability1 = it }
         abilityDropdown1.setSelectedByValue(ability1)
         addRenderableWidget(abilityDropdown1); dropdowns.add(abilityDropdown1)
-        abilityDropdown2 = Dropdown(fieldX + 120, 152, 110, 14, labels, values, 10) { ability2 = it }
+        abilityDropdown2 = Dropdown(fieldX + 132, 152, 100, 14, labels, values, 10) { ability2 = it }
         abilityDropdown2.setSelectedByValue(ability2)
         addRenderableWidget(abilityDropdown2); dropdowns.add(abilityDropdown2)
         abilityDropdown3 = Dropdown(fieldX, 170, 190, 14, labels, values, 10) { hiddenAbility = it }
@@ -234,11 +234,11 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
             g.drawString(this.font, label + ":", left + col * 150, 60 + row * 18, 0xAAAAAA)
             i++
         }
-        g.drawString(this.font, "属性1:", left, 116, 0xAAAAAA)
-        g.drawString(this.font, "属性2:", left + 110, 116, 0xAAAAAA)
+        g.drawString(this.font, "属性1:", left + 42, 116, 0xAAAAAA)
+        g.drawString(this.font, "属性2:", left + 166, 116, 0xAAAAAA)
         g.drawString(this.font, "特性搜索:", left, 136, 0xAAAAAA)
-        g.drawString(this.font, "特性1:", left, 156, 0xAAAAAA)
-        g.drawString(this.font, "特性2:", left + 120, 156, 0xAAAAAA)
+        g.drawString(this.font, "特性1:", left + 42, 156, 0xAAAAAA)
+        g.drawString(this.font, "特性2:", left + 174, 156, 0xAAAAAA)
         g.drawString(this.font, "隐藏特性:", left, 174, 0xAAAAAA)
         g.drawString(this.font, "学习表:", left, 188, 0xAAAAAA)
         g.drawString(this.font, "留空=不改；保存后重进世界生效", left, 202, 0x888888)

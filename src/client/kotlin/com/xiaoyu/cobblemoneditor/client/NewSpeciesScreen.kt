@@ -26,6 +26,7 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
 
     private lateinit var idBox: EditBox
     private lateinit var dexBox: EditBox
+    private lateinit var nameZhBox: EditBox
     private lateinit var abilitySearchBox: EditBox
     private lateinit var moveSearchBox: EditBox
     private lateinit var levelBox: EditBox
@@ -65,12 +66,16 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
         dexBox.setMaxLength(5)
         dexBox.setHint(Component.literal("9001"))
         addRenderableWidget(dexBox)
+        nameZhBox = EditBox(this.font, fieldX + 146, 14, 102, 14, Component.empty())
+        nameZhBox.setMaxLength(32)
+        nameZhBox.setHint(Component.literal("中文名(可选)"))
+        addRenderableWidget(nameZhBox)
 
         val typeLabels = listOf("无") + TypeCatalog.TYPES.map { it.second }
         val typeValues = listOf("") + TypeCatalog.TYPES.map { it.first }
         val d1 = Dropdown(fieldX, 32, 92, 14, typeLabels, typeValues, 10) { type1 = it }
         addRenderableWidget(d1); dropdowns.add(d1)
-        val d2 = Dropdown(fieldX + 110, 32, 92, 14, typeLabels, typeValues, 10) { type2 = it }
+        val d2 = Dropdown(fieldX + 124, 32, 92, 14, typeLabels, typeValues, 10) { type2 = it }
         addRenderableWidget(d2); dropdowns.add(d2)
 
         var i = 0
@@ -88,12 +93,13 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
 
         moveSearchBox = EditBox(this.font, fieldX, 158, 90, 14, Component.empty())
         moveSearchBox.setMaxLength(64)
+        moveSearchBox.setHint(Component.literal("招式"))
         addRenderableWidget(moveSearchBox)
         methodDropdown = Dropdown(fieldX + 98, 158, 64, 14, methods.map { it.first }, methods.map { it.second }, 6) { method = it }
         addRenderableWidget(methodDropdown); dropdowns.add(methodDropdown)
         levelBox = EditBox(this.font, fieldX + 170, 158, 26, 14, Component.empty())
         levelBox.setMaxLength(3)
-        levelBox.setHint(Component.literal("1"))
+        levelBox.setHint(Component.literal("等级"))
         addRenderableWidget(levelBox)
         rebuildMoveDropdown()
 
@@ -126,10 +132,10 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
         if (ability1.isNotEmpty() && f.none { it.first == ability1 }) ability1 = ""
         if (ability2.isNotEmpty() && f.none { it.first == ability2 }) ability2 = ""
         if (hiddenAbility.isNotEmpty() && f.none { it.first == hiddenAbility }) hiddenAbility = ""
-        abilityDropdown1 = Dropdown(fieldX, 122, 110, 14, labels, values, 10) { ability1 = it }
+        abilityDropdown1 = Dropdown(fieldX, 122, 100, 14, labels, values, 10) { ability1 = it }
         abilityDropdown1.setSelectedByValue(ability1)
         addRenderableWidget(abilityDropdown1); dropdowns.add(abilityDropdown1)
-        abilityDropdown2 = Dropdown(fieldX + 120, 122, 110, 14, labels, values, 10) { ability2 = it }
+        abilityDropdown2 = Dropdown(fieldX + 132, 122, 100, 14, labels, values, 10) { ability2 = it }
         abilityDropdown2.setSelectedByValue(ability2)
         addRenderableWidget(abilityDropdown2); dropdowns.add(abilityDropdown2)
         hiddenAbilityDropdown = Dropdown(fieldX, 140, 190, 14, labels, values, 10) { hiddenAbility = it }
@@ -179,9 +185,14 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
         if (!id.matches(Regex("[a-z][a-z0-9_]*"))) { msg("id 须以字母开头，仅限小写字母/数字/下划线"); return }
         val dex = dexBox.value.trim().toIntOrNull()
         if (dex == null || dex !in 1..99999) { msg("图鉴号需 1-99999"); return }
+        val namezh = nameZhBox.value.trim()
+        if (namezh.isNotEmpty() && namezh.any { it == ',' || it == '"' || it == '\\' || it == '|' }) {
+            msg("中文名不能含 , \" \\ | 字符"); return
+        }
         if (type1.isEmpty()) { msg("请选择属性1"); return }
         val parts = ArrayList<String>()
         parts.add("dex=$dex")
+        if (namezh.isNotEmpty()) parts.add("namezh=$namezh")
         parts.add("type1=$type1")
         if (type2.isNotEmpty()) parts.add("type2=$type2")
         for ((k, box) in statBoxes) {
@@ -230,8 +241,8 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
         val left = width / 2 - 160
         g.drawCenteredString(this.font, this.title, width / 2, 4, 0xFFFFFF)
         g.drawString(this.font, "id/图鉴:", left, 18, 0xAAAAAA)
-        g.drawString(this.font, "属性1:", left, 36, 0xAAAAAA)
-        g.drawString(this.font, "属性2:", left + 110, 36, 0xAAAAAA)
+        g.drawString(this.font, "属性1:", left + 42, 36, 0xAAAAAA)
+        g.drawString(this.font, "属性2:", left + 166, 36, 0xAAAAAA)
         var i = 0
         for ((_, label) in stats) {
             val col = i % 2; val row = i / 2
@@ -239,12 +250,9 @@ class NewSpeciesScreen : Screen(Component.literal("新建精灵")) {
             i++
         }
         g.drawString(this.font, "特性搜索:", left, 108, 0xAAAAAA)
-        g.drawString(this.font, "特性1:", left, 126, 0xAAAAAA)
-        g.drawString(this.font, "特性2:", left + 120, 126, 0xAAAAAA)
-        g.drawString(this.font, "隐藏:", left, 144, 0xAAAAAA)
-        g.drawString(this.font, "招式:", left, 162, 0xAAAAAA)
-        g.drawString(this.font, "来源:", left + 100, 162, 0xAAAAAA)
-        g.drawString(this.font, "等级:", left + 172, 162, 0xAAAAAA)
+        g.drawString(this.font, "特性1:", left + 42, 126, 0xAAAAAA)
+        g.drawString(this.font, "特性2:", left + 174, 126, 0xAAAAAA)
+        g.drawString(this.font, "隐藏:", left + 42, 144, 0xAAAAAA)
         g.drawString(this.font, "学习表:", left, 200, 0xAAAAAA)
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }

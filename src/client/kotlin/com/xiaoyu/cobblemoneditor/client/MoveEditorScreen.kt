@@ -47,9 +47,9 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
 
         idBox = EditBox(this.font, bx, 22, 100, 16, Component.empty()); idBox.setMaxLength(32)
         nameBox = EditBox(this.font, bx + 108, 22, 100, 16, Component.empty()); nameBox.setMaxLength(64)
-        powerBox = EditBox(this.font, bx, 42, 40, 16, Component.empty()); powerBox.setMaxLength(3)
-        accBox = EditBox(this.font, bx + 48, 42, 40, 16, Component.empty()); accBox.setMaxLength(3)
-        ppBox = EditBox(this.font, bx + 96, 42, 40, 16, Component.empty()); ppBox.setMaxLength(3)
+        powerBox = EditBox(this.font, bx, 42, 40, 16, Component.empty()); powerBox.setMaxLength(3); powerBox.setHint(Component.literal("威力"))
+        accBox = EditBox(this.font, bx + 48, 42, 40, 16, Component.empty()); accBox.setMaxLength(3); accBox.setHint(Component.literal("命中"))
+        ppBox = EditBox(this.font, bx + 96, 42, 40, 16, Component.empty()); ppBox.setMaxLength(3); ppBox.setHint(Component.literal("pp"))
         addRenderableWidget(idBox); addRenderableWidget(nameBox)
         addRenderableWidget(powerBox); addRenderableWidget(accBox); addRenderableWidget(ppBox)
 
@@ -163,9 +163,6 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         g.drawCenteredString(this.font, this.title, width / 2, 6, 0xFFFFFF)
         g.drawString(this.font, "id:", left, 26, 0xAAAAAA)
         g.drawString(this.font, "名称:", left + 112, 26, 0xAAAAAA)
-        g.drawString(this.font, "威力:", left, 46, 0xAAAAAA)
-        g.drawString(this.font, "命中:", left + 50, 46, 0xAAAAAA)
-        g.drawString(this.font, "pp:", left + 98, 46, 0xAAAAAA)
         g.drawString(this.font, "属性:", left, 66, 0xAAAAAA)
         g.drawString(this.font, "分类:", left, 86, 0xAAAAAA)
         g.drawString(this.font, "优先:", left, 106, 0xAAAAAA)
