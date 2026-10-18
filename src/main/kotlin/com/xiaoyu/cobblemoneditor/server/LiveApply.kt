@@ -11,10 +11,12 @@ import net.minecraft.server.MinecraftServer
 
 /**
  * 实时生效管线（借鉴精灵工坊 WorkshopRuntime 的设计，直接用 Cobblemon 编译期 API）：
- * 数据包文件写好后 → 重新扫描数据包 → 把 cobblemoneditor 包移到启用列表末尾（最后加载，防止被
- * 其它包覆盖）→ server.reloadResources(enabled) 异步重载 → Cobblemon 自带的 reload 监听器
- * 会把 moves 目录与 abilities 目录下的 .js 重新注册进内存（Moves.getByName / Abilities.get 立即可命中）
- * → 重载完成后 applyLive 把种族值/特性池/学习表直接注入内存中的 Species 对象 → sync 全部在线玩家。
+ * 保存命令只写数据包文件并把手动补丁加入队列（queue），**不自动重载**；玩家在主菜单点
+ * 「加载修改」（/cobbleeditor load）时才会执行：重新扫描数据包 → 把 cobblemoneditor 包移到
+ * 启用列表末尾（最后加载，防止被其它包覆盖）→ server.reloadResources(enabled) 异步重载 →
+ * Cobblemon 自带的 reload 监听器会把 moves 目录与 abilities 目录下的 .js 重新注册进内存
+ * （Moves.getByName / Abilities.get 立即可命中）→ 重载完成后 applyLive 把种族值/特性池/学习表
+ * 直接注入内存中的 Species 对象 → sync 全部在线玩家。
  *
  * 仍需要重进世界的部分：新精灵（species 目录的 .json，PokemonSpecies 注册表不热重载）、
  * 中文显示名（resources.zip 世界资源包在进入世界时加载）。
@@ -33,10 +35,16 @@ object LiveApply {
     private val pendingPatches = mutableListOf<SpeciesPatchData>()
     private var reloadInFlight = false
 
-    /** 保存成功后调用；patches 为空时仅触发重载（用于新招式/特性立即注册）。 */
-    fun request(server: MinecraftServer, patches: List<SpeciesPatchData>) {
+    /** 保存成功后调用：只把精灵补丁加入待应用队列，不触发重载（重载由玩家点「加载修改」手动触发）。 */
+    fun queue(patches: List<SpeciesPatchData>) {
         synchronized(pendingPatches) { pendingPatches.addAll(patches) }
+    }
+
+    /** 手动「加载」入口：重新扫描数据包 + 重载资源，完成后把队列里的补丁注入内存并同步玩家。 */
+    fun reloadAndApply(server: MinecraftServer): Boolean {
+        if (reloadInFlight) return false
         drain(server)
+        return true
     }
 
     private fun drain(server: MinecraftServer) {

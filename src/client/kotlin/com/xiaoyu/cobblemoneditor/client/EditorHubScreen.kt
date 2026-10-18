@@ -16,14 +16,18 @@ class EditorHubScreen : Screen(Component.literal("Cobblemon Data Editor")) {
         addRenderableWidget(Button.builder(Component.literal("招式 · 编辑器")) { Minecraft.getInstance().setScreen(MoveEditorScreen()) }.bounds(cx, 100, w, 22).build())
         addRenderableWidget(Button.builder(Component.literal("特性 · 编辑器")) { Minecraft.getInstance().setScreen(AbilityEditorScreen()) }.bounds(cx, 126, w, 22).build())
         addRenderableWidget(Button.builder(Component.literal("道具 · 编辑器")) { Minecraft.getInstance().setScreen(HeldItemEditorScreen()) }.bounds(cx, 152, w, 22).build())
-        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(cx, 178, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("加载修改（应用保存的编辑）")) {
+            Minecraft.getInstance().player?.connection?.sendCommand("cobbleeditor load")
+            onClose()
+        }.bounds(cx, 178, w, 22).build())
+        addRenderableWidget(Button.builder(Component.literal("关闭")) { onClose() }.bounds(cx, 204, w, 22).build())
     }
 
     override fun render(g: GuiGraphics, mx: Int, my: Int, p: Float) {
         g.fill(0, 0, width, height, 0xC0101010.toInt())
         super.render(g, mx, my, p)
         g.drawCenteredString(this.font, this.title, width / 2, 26, 0xFFFFFFFF.toInt())
-        g.drawCenteredString(this.font, "选择要编辑的内容（保存后重进世界生效）", width / 2, 40, 0xFFAAAAAA.toInt())
+        g.drawCenteredString(this.font, "保存只写文件；点『加载修改』应用（无需重进世界）", width / 2, 40, 0xFFAAAAAA.toInt())
     }
 
     override fun isPauseScreen(): Boolean = false

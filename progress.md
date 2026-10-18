@@ -122,3 +122,8 @@
 - 问题2：新特性不显示中文名/描述。根因=游戏运行期间客户端全程锁定 resources.zip，保存时的 lang 写入全部失败。重构：保存只写数据包；lang 由 syncAll 统一负责——SERVER_STARTED 补写（内容无变化时不写文件）+ SERVER_STOPPED 后台线程趁锁释放后补写（最多 30 秒重试）；写入失败清理临时文件。live 存档的 resources.zip 已手工补齐 c597391/c517273 条目。
 - 问题3：进世界二次资源加载。根因=syncAll 每次启动都重写 resources.zip 触发资源管理器重载。修复=内容与现包一致时跳过写入（不改变文件时间戳 → 不触发重载）。
 - 部署：v0.3.7 jar 已装入整合包 mods（0.3.6 归档），Minecraft 关闭状态部署无锁。
+## v0.3.8 —— 手动加载（2026-10-18 21:2x）
+- 用户请求：保存后自动加载改成手动加载，加一个「加载」按钮。
+- 实现：保存命令只写数据包文件（runSet 把补丁入队 queue，runMoveAdd/runAbilityAdd/runItemAdd 不再触发重载）；新增 /cobbleeditor load 命令（LiveApply.reloadAndApply：重扫数据包→包移启用列表末尾→reloadResources→应用补丁队列→sync 玩家）；主菜单（EditorHubScreen）新增「加载修改（应用保存的编辑）」按钮，点击发送 cobbleeditor load 并关屏。
+- 保存提示文案全部改为「点击主菜单『加载修改』后生效」。
+- 部署：v0.3.8 jar 已装入 mods（0.3.7 归档），Minecraft 关闭状态部署。

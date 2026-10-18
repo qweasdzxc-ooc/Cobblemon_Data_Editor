@@ -108,7 +108,9 @@ object EditorCommands {
                         )
                 )
 
-            dispatcher.register(root.then(setCmd).then(speciesCmd).then(moveCmd).then(abilityCmd).then(itemCmd))
+            val loadCmd = Commands.literal("load").executes { ctx -> runLoad(ctx.source) }
+
+            dispatcher.register(root.then(loadCmd).then(setCmd).then(speciesCmd).then(moveCmd).then(abilityCmd).then(itemCmd))
         }
     }
 
@@ -144,13 +146,13 @@ object EditorCommands {
         val json = SpeciesPatch.buildJson(species, parsed)
         return when (val r = DatapackWriter.writeSpeciesAddition(packRoot(source), PACK_ID, species, json)) {
             is DatapackWriter.Result.Written -> {
-                LiveApply.request(source.server, listOf(LiveApply.SpeciesPatchData(
+                LiveApply.queue(listOf(LiveApply.SpeciesPatchData(
                     speciesName = species,
                     stats = parsed.stats,
                     abilities = parsed.replaceAbilities ?: emptyList(),
                     moves = parsed.replaceMoves ?: emptyList(),
                 )))
-                source.sendSuccess({ Component.literal("已保存 $species 补丁并即时应用（种族值/特性/学习表）。新精灵与中文名重进世界后生效。 文件: ${r.path}") }, false)
+                source.sendSuccess({ Component.literal("已保存 $species 补丁。点击主菜单『加载修改』应用（种族值/特性/学习表）。新精灵与中文名重进世界后生效。 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -193,9 +195,8 @@ object EditorCommands {
         return when (val r = DatapackWriter.writeMove(packRoot(source), PACK_ID, move.id, js)) {
             is DatapackWriter.Result.Written -> {
                 var note = ""
-                if (ConflictChecker.moveNameTaken(move.id)) note += " ⚠ 已有同名招式，重进世界后本次保存将覆盖其数据"
-                LiveApply.request(source.server, emptyList())
-                source.sendSuccess({ Component.literal("已保存招式 ${move.id}，效果即时生效。$note 文件: ${r.path}") }, false)
+                if (ConflictChecker.moveNameTaken(move.id)) note += " ⚠ 已有同名招式，加载后将覆盖其数据"
+                source.sendSuccess({ Component.literal("已保存招式 ${move.id}。点击主菜单『加载修改』后生效。$note 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -216,9 +217,8 @@ object EditorCommands {
         return when (val r = DatapackWriter.writeAbility(packRoot(source), PACK_ID, ability.id, js)) {
             is DatapackWriter.Result.Written -> {
                 var note = ""
-                if (ConflictChecker.abilityNameTaken(ability.id)) note += " ⚠ 已有同名特性，重进世界后本次保存将覆盖其数据"
-                LiveApply.request(source.server, emptyList())
-                source.sendSuccess({ Component.literal("已保存特性 ${ability.id}，效果即时生效。$note 文件: ${r.path}") }, false)
+                if (ConflictChecker.abilityNameTaken(ability.id)) note += " ⚠ 已有同名特性，加载后将覆盖其数据"
+                source.sendSuccess({ Component.literal("已保存特性 ${ability.id}。点击主菜单『加载修改』后生效。$note 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -237,8 +237,7 @@ object EditorCommands {
         val js = HeldItemSpecFactory.renderJs(item)
         return when (val r = DatapackWriter.writeHeldItem(packRoot(source), PACK_ID, item.id, js)) {
             is DatapackWriter.Result.Written -> {
-                LiveApply.request(source.server, emptyList())
-                source.sendSuccess({ Component.literal("已保存道具效果 ${item.id}，效果即时生效。用 /cobbleeditor item give ${item.id} <物品id> 把效果绑定到物品。 文件: ${r.path}") }, false)
+                source.sendSuccess({ Component.literal("已保存道具效果 ${item.id}。点击主菜单『加载修改』后生效。用 /cobbleeditor item give ${item.id} <物品id> 把效果绑定到物品。 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -246,6 +245,15 @@ object EditorCommands {
                 0
             }
         }
+    }
+
+    private fun runLoad(source: CommandSourceStack): Int {
+        if (!LiveApply.reloadAndApply(source.server)) {
+            source.sendFailure(Component.literal("已有一次加载正在进行中，请稍候。"))
+            return 0
+        }
+        source.sendSuccess({ Component.literal("正在加载资源并应用所有修改……完成后新招式/特性/种族值/特性池/学习表立即生效（新精灵与中文名仍需重进世界）。") }, false)
+        return 1
     }
 
     private fun runItemGive(source: CommandSourceStack, effectId: String, itemId: String): Int {
