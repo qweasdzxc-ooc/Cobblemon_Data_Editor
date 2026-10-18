@@ -55,6 +55,8 @@ object MoveSpecFactory {
             // 自定义 JS 参数走 base64（URL 安全、无填充），避免 JS 里的冒号/竖线破坏 spec 语法
             val params = if (brick.kind == MoveBrickKind.RAW_HANDLER) rawParams.map { decodeRaw(it) } else rawParams
             if (!validateBrickParams(brick.paramHints, params)) return null
+            // 自定义 JS 必须通过完整性检查，防止把注册表 eval 炸掉（世界无法进入）
+            if (brick.kind == MoveBrickKind.RAW_HANDLER && !isSaneRawJs(params.getOrNull(0) ?: "")) return null
             bricks.add(ParsedBrick(brick, params))
         }
         return MoveSpec(id, name, type, category, basePower, accuracy, pp, priority, target, flags, bricks, desc)

@@ -31,6 +31,7 @@ enum class AbilityTrigger(
     ON_TAKE_ITEM("onTakeItem", "item, pokemon, source", "道具被夺时"),
     ON_MODIFY_MOVE("onModifyMove", "move, pokemon, target, move", "招式修正时"),
     ON_MODIFY_CRIT_RATIO("onModifyCritRatio", "critRatio, source, target, move", "会心等级计算时"),
+    ON_SOURCE_AFTER_FAINT("onSourceAfterFaint", "length, target, source, effect", "击倒对手后"),
 }
 
 /** 能力效果积木：触发时机 + 动作片段（动作会拼进对应事件处理器函数体）。 */
@@ -203,6 +204,10 @@ object AbilityEffects {
             listOf("加成级数"),
             listOf("1" to "+1(超幸运)", "2" to "+2"),
             { p -> "return critRatio + " + p[0] + ";" }),
+        AbilityEffectBrick("faint_boost", "击倒对手后提升", AbilityTrigger.ON_SOURCE_AFTER_FAINT,
+            listOf("属性", "级数"),
+            listOf("atk:1" to "攻击+1", "spe:1" to "速度+1", "spa:1" to "特攻+1"),
+            { p -> "if (effect && effect.effectType === 'Move') { this.boost({ " + p[0] + ": " + p[1] + " }, source); }" }),
         AbilityEffectBrick("raw_effect", "自定义JS", AbilityTrigger.ON_START,
             listOf("完整JS(含函数签名)"),
             listOf(

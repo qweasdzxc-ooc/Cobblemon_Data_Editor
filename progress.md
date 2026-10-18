@@ -109,3 +109,11 @@
 5. **参数显示不全**——三编辑器增加"参数说明"行（paramHints），已添加条目把参数解析成预设中文名显示。
 
 构建 BUILD SUCCESSFUL、部署 [自制]CobblemonDataEditor-0.3.5.jar（304457B）、README 同步更新并推送。
+## 2026-10-18 20:1x v0.3.6 万毒穿心炸服修复
+- 根因：用户把"效果名:参数"（contact_poison:100、boost_on_faint:atk:1,spe:1）当作自定义JS填进 raw 参数框，
+  渲染器原样输出后生成非法 JS（boost_on_faint:atk:1 → "Expected comma but found :"），
+  Cobblemon Abilities.reload 拼全量注册表 eval 失败 → 数据包加载失败 → 无法进入世界。
+- 修复：①存档 c597391.js 已重写为合法 JS（坏文件备份 .bak-broken-20261018），
+  接触剧毒/击倒强化按真实积木重建 ②新增 isSaneRawJs 校验（括号配平+顶层裸冒号拒绝），服务端与客户端双端拦截
+  ③新增特性积木 faint_boost（onSourceAfterFaint 击倒对手后提升）④v0.3.6 构建部署。
+- 教训：任何会拼进 Cobblemon 注册表 JS 的用户输入都必须做语法级防呆；数据包 eval 失败=世界无法进入（致命）。

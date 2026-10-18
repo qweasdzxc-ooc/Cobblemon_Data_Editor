@@ -19,6 +19,38 @@ fun validateBrickParams(hints: List<String>, params: List<String>): Boolean {
 }
 
 /**
+ * 粗略的 JS 片段完整性检查（用于 raw_effect/RAW_HANDLER 的自定义 JS 参数）。
+ * 规则：括号 {}()[] 配平、字符串闭合、顶层（深度 0）不允许裸冒号。
+ * 最后一条是防呆关键：用户常把"效果名:参数"（如 boost_on_faint:atk:1）当 JS 填进来，
+ * 这种文本会被原样拼进对象字面量，把整个特性/招式注册表 eval 炸掉（世界无法进入）。
+ */
+fun isSaneRawJs(js: String): Boolean {
+    if (js.isBlank()) return false
+    var depth = 0
+    var inStr: Char? = null
+    var i = 0
+    while (i < js.length) {
+        val c = js[i]
+        if (inStr != null) {
+            if (c == '\\') { i += 2; continue }
+            if (c == inStr) inStr = null
+        } else {
+            when (c) {
+                '\'', '"', '`' -> inStr = c
+                '{', '(', '[' -> depth++
+                '}', ')', ']' -> {
+                    depth--
+                    if (depth < 0) return false
+                }
+                else -> if (c == ':' && depth == 0) return false
+            }
+        }
+        i++
+    }
+    return inStr == null && depth == 0
+}
+
+/**
  * 招式效果积木。
  * - FIELD：render 返回完整 "key: value" 片段
  * - SECONDARY：render 返回 "{...}" 值片段，多个会合并成 secondaries 数组

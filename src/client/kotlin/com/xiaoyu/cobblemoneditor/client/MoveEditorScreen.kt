@@ -9,6 +9,7 @@ import com.xiaoyu.cobblemoneditor.data.PriorityCatalog
 import com.xiaoyu.cobblemoneditor.data.TargetCatalog
 import com.xiaoyu.cobblemoneditor.data.TypeCatalog
 import com.xiaoyu.cobblemoneditor.data.validateBrickParams
+import com.xiaoyu.cobblemoneditor.data.isSaneRawJs
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
@@ -153,6 +154,10 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
             else raw.split(':').map { it.trim() }
         if (!validateBrickParams(brick.paramHints, params)) {
             msg("参数不完整或格式错误（" + brick.paramHints.joinToString("/") + "）；示例：" + brick.presets.firstOrNull()?.first.orEmpty())
+            return
+        }
+        if (brick.kind == MoveBrickKind.RAW_HANDLER && !isSaneRawJs(raw)) {
+            msg("自定义JS无效：必须是完整的JS事件处理函数（如 onTryHit(target, source, move) { return null; }），效果名不能直接当JS")
             return
         }
         bricks.add(currentBrick to raw)

@@ -2,6 +2,7 @@ package com.xiaoyu.cobblemoneditor.client
 
 import com.xiaoyu.cobblemoneditor.client.widget.Dropdown
 import com.xiaoyu.cobblemoneditor.data.AbilityEffects
+import com.xiaoyu.cobblemoneditor.data.isSaneRawJs
 import com.xiaoyu.cobblemoneditor.data.validateBrickParams
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
@@ -111,6 +112,10 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
             else raw.split(':').map { it.trim() }
         if (!validateBrickParams(brick.paramHints, params)) {
             msg("参数不完整或格式错误（" + brick.paramHints.joinToString("/") + "）；示例：" + brick.presets.firstOrNull()?.first.orEmpty())
+            return
+        }
+        if (brick.id == "raw_effect" && !isSaneRawJs(raw)) {
+            msg("自定义JS无效：必须是完整的JS事件处理函数（如 onStart(pokemon) { this.boost({ atk: 1 }, pokemon); }），效果名不能直接当JS")
             return
         }
         effects.add(currentBrick to raw)
