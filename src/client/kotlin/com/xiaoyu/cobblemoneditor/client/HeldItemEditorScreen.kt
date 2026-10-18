@@ -15,10 +15,9 @@ import net.minecraft.network.chat.Component
  * 并把效果绑定到任意 MC 物品（cobblemon:held_item_effect 组件）后直接获得。
  */
 class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器")) {
-    private val labelX = width / 2 - 170
-    private val fieldX = width / 2 - 110
-    private val left = labelX
-    private val bx = fieldX
+    // 注意：width/height 在构造时还是 0，必须在 init() 里算布局（否则整个界面画在负坐标上）
+    private var left = 0
+    private var bx = 0
 
     private lateinit var idBox: EditBox
     private lateinit var nameBox: EditBox
@@ -81,6 +80,10 @@ class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器
     }
 
     override fun init() {
+        val labelX = width / 2 - 170
+        val fieldX = width / 2 - 110
+        left = labelX
+        bx = fieldX
         idBox = EditBox(this.font, bx, 18, 100, 14, Component.empty())
         idBox.setMaxLength(32)
         idBox.setHint(Component.literal("效果id(小写字母数字)"))
