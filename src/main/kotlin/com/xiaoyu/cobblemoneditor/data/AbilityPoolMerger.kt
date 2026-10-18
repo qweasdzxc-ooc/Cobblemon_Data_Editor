@@ -15,11 +15,15 @@ import net.minecraft.server.MinecraftServer
  */
 object AbilityPoolMerger {
 
-    /** 把运行时特性池读回字符串列表（Priority.LOW = 隐藏特性，h: 前缀；已由字节码证实） */
+    /**
+     * 把运行时特性池读回字符串列表（Priority.LOW 与 LOWEST 都是隐藏特性，h: 前缀。
+     * 只认 LOW 会把实时应用加的 LOWEST 隐藏特性读成普通条目，再次合并时产生
+     * "xxx" 与 "h:xxx" 两条重复。）
+     */
     fun read(pool: AbilityPool?): List<String> =
         pool?.map { pa ->
             val name = pa.template.name
-            if (pa.priority == Priority.LOW) "h:$name" else name
+            if (pa.priority == Priority.LOW || pa.priority == Priority.LOWEST) "h:$name" else name
         } ?: emptyList()
 
     /**

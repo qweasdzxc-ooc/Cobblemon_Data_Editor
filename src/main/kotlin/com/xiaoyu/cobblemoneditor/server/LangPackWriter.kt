@@ -33,7 +33,8 @@ object LangPackWriter {
     private const val EN_NS = "assets/cobblemoneditor/lang/en_us.json"
     private const val PACK_MCMETA = "pack.mcmeta"
     private const val PACK_FORMAT = 34 // Minecraft 1.21.1 资源包格式
-    private const val MAX_RETRY = 30 // 后台同步最多重试次数（每次间隔 1 秒）
+    private const val MAX_RETRY = 60 // 后台同步最多重试次数（每次间隔 1 秒）
+    private const val INITIAL_DELAY_MS = 5000L // 首次尝试前的等待，等客户端完成卸载、停止监听资源包
     private val gson = Gson()
 
     fun writeMove(worldDir: Path, id: String, displayName: String, desc: String): Boolean {
@@ -94,10 +95,17 @@ object LangPackWriter {
 
     /**
      * 后台线程反复尝试 syncAll：世界退出后客户端会释放 resources.zip 的文件锁，
-     * 趁隙写入（每次间隔 1 秒，最多 30 次）。用于 SERVER_STOPPED。
+     * 趁隙写入。先等 INITIAL_DELAY_MS 再试——等待期间客户端完成世界卸载并停止
+     * 监听世界资源包，此时写入不会触发"退出世界时的二次资源加载"。
+     * 之后每次间隔 1 秒，最多 MAX_RETRY 次。用于 SERVER_STOPPED。
      */
     fun syncInBackground(worldDir: Path, packRoot: Path) {
         val t = Thread({
+            try {
+                Thread.sleep(INITIAL_DELAY_MS)
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
             var attempt = 0
             while (attempt < MAX_RETRY) {
                 if (syncAll(worldDir, packRoot)) return@Thread

@@ -127,3 +127,7 @@
 - 实现：保存命令只写数据包文件（runSet 把补丁入队 queue，runMoveAdd/runAbilityAdd/runItemAdd 不再触发重载）；新增 /cobbleeditor load 命令（LiveApply.reloadAndApply：重扫数据包→包移启用列表末尾→reloadResources→应用补丁队列→sync 玩家）；主菜单（EditorHubScreen）新增「加载修改（应用保存的编辑）」按钮，点击发送 cobbleeditor load 并关屏。
 - 保存提示文案全部改为「点击主菜单『加载修改』后生效」。
 - 部署：v0.3.8 jar 已装入 mods（0.3.7 归档），Minecraft 关闭状态部署。
+## v0.3.9 —— 特性重复与进出世界重复加载修复（2026-10-18 深夜）
+- 问题1：精灵编辑保存后特性重复存在（beedrill.json 出现 "sniper" 与 "h:sniper"、"c597391" 与 "h:c597391" 双份）。根因=实时应用把隐藏特性加在 Priority.LOWEST，而 AbilityPoolMerger.read 只把 Priority.LOW 读回为 h: 前缀→LOWEST 隐藏特性被读成普通条目→下次合并写盘出现普通+隐藏两份。修复：read 把 LOW 与 LOWEST 都映射 h:；applyLive 隐藏特性改用 Priority.LOW（与数据包适配器 HiddenAbility→LOW 语义一致）；beedrill.json 已去重并备份。
+- 问题2：退出世界时再加载一次。根因=世界退出后后台语言包同步趁客户端仍在卸载的窗口写 resources.zip，资源管理器检测到包变化触发重载。修复：syncInBackground 首次尝试前等待 5 秒（等客户端完全卸载、停止监听世界资源包），重试上限提到 60 次。
+- 部署：v0.3.9 jar 已装入整合包 mods（0.3.8 归档）。

@@ -98,7 +98,7 @@ object LiveApply {
             val id = a.removePrefix("h:")
             val template = Abilities.get(id) ?: continue
             if (species.abilities.any { it.template.name == id }) continue
-            val priority = if (hidden) Priority.LOWEST else Priority.NORMAL
+            val priority = if (hidden) Priority.LOW else Priority.NORMAL
             species.abilities.add(priority, CommonAbility(template))
         }
         for (m in p.moves) {
