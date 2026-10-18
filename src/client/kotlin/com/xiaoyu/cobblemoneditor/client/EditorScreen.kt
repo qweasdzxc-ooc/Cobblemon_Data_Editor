@@ -138,13 +138,13 @@ class EditorScreen : Screen(Component.literal("精灵编辑器")) {
         return t.showdownId.lowercase()
     }
 
-    /** 读 AbilityPool：第一个列表=常驻特性(≤2)，第二个=隐藏特性(≤1)。 */
+    /** 读 AbilityPool：第一个列表=常驻特性(≤2)，第二个=隐藏特性(≤1)。LOW/LOWEST 都是隐藏。 */
     private fun currentAbilities(s: Species?): Pair<List<String>, List<String>> {
         if (s == null) return emptyList<String>() to emptyList<String>()
         val normal = mutableListOf<String>(); val hidden = mutableListOf<String>()
         for (pa in s.abilities) {
             val n = pa.template.name
-            if (pa.priority == Priority.LOW) hidden.add(n) else normal.add(n)
+            if (pa.priority == Priority.LOW || pa.priority == Priority.LOWEST) hidden.add(n) else normal.add(n)
         }
         return normal.take(2) to hidden.take(1)
     }

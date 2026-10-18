@@ -131,3 +131,7 @@
 - 问题1：精灵编辑保存后特性重复存在（beedrill.json 出现 "sniper" 与 "h:sniper"、"c597391" 与 "h:c597391" 双份）。根因=实时应用把隐藏特性加在 Priority.LOWEST，而 AbilityPoolMerger.read 只把 Priority.LOW 读回为 h: 前缀→LOWEST 隐藏特性被读成普通条目→下次合并写盘出现普通+隐藏两份。修复：read 把 LOW 与 LOWEST 都映射 h:；applyLive 隐藏特性改用 Priority.LOW（与数据包适配器 HiddenAbility→LOW 语义一致）；beedrill.json 已去重并备份。
 - 问题2：退出世界时再加载一次。根因=世界退出后后台语言包同步趁客户端仍在卸载的窗口写 resources.zip，资源管理器检测到包变化触发重载。修复：syncInBackground 首次尝试前等待 5 秒（等客户端完全卸载、停止监听世界资源包），重试上限提到 60 次。
 - 部署：v0.3.9 jar 已装入整合包 mods（0.3.8 归档）。
+## v0.3.10 —— 特性槽位显示一致性（2026-10-18 深夜）
+- 用户确认大针蜂应为 常驻2+隐藏1：swarm + 万毒穿心(常驻) + h:sniper(隐藏)。beedrill.json 已修正为该组合（v0.3.9 去重时误留了 h:c597391）。
+- 顺带修复：客户端 EditorScreen.currentAbilities 原来也只认 Priority.LOW 为隐藏——实时应用产生的 LOWEST 隐藏特性会在 GUI 里显示成常驻槽位（槽位错位正是用户困惑的来源之一）。现 LOW/LOWEST 都归类隐藏，与服务端 AbilityPoolMerger 一致。
+- 部署：v0.3.10 jar 已装入整合包 mods（0.3.9 归档）。
