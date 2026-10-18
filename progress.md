@@ -71,3 +71,15 @@
 ## 2026-10-18 12:43 v0.3.2 部署完成
 - 用户关闭游戏后：mods 装入 [自制]CobblemonDataEditor-0.3.2.jar（183886B）
 - 0.3.1 归档至 _mods_backup_20261007_234644
+
+## 2026-10-18 14:55 v0.3.3 六项反馈全部实现 + 部署
+- ①特性搜索重置丢失已选值：rebuildAbilityDropdowns 把已确认值追加进过滤下拉（extra 列表）
+- ②招式编辑器全重排（标签画在控件间隙、描述框 desc=、保存时写入 lang .desc 键）+ 赋予精灵区（招式/特性编辑器底部，走 cobbleeditor set moves=/abilities= 合并语义）
+- ③精灵编辑器选中即预填六维/属性/特性/学习表（读 Species.baseStats/primaryType/abilities/moves）；三属性+：Cobblemon 数据模型只有 primaryType/secondaryType 两槽，无法支持（未实现，需向用户说明）
+- ④特性编辑器：新触发（onModifyAtk 等 20 个）与新积木（40 个）落地
+- ⑤携带道具：HeldItemEditorScreen + HeldItemBricks(10) + HeldItemSpec + /cobbleeditor item add/give（HeldItemEffectComponent 绑定到任意物品，编辑器一键给予）
+- ⑥积木库大扩展：招式 35 积木（含 raw_handler 自定义 JS、自定义陷阱 condition 注入、官方陷阱 preset 9 个）；特性 40 积木（含 raw_effect）；raw 参数经 URL-safe Base64 传输（解决 ":"/"|"/"&" 语法冲突）
+- 关键技术考证：side condition 由 dex-conditions.js 按 id 从招式 condition 字段解析（sideCondition:'{MOVEID}'+condition 注入=自定义陷阱正确写法）
+- 构建：remapJar OOM（-Xmx2G 不够）→ gradle.properties 提到 -Xmx4G + 重启 daemon 后 BUILD SUCCESSFUL；误提交的 752MB hprof 已从仓库移除并 ignore *.hprof
+- 部署：mods 装入 [自制]CobblemonDataEditor-0.3.3.jar（222115B，71 entries，fabric.mod.json=0.3.3），0.3.2 归档备份目录；commit d86d4a0 + 1459cb4
+- 待办：用户复测六项反馈；item 2/4 的 UI 联调问题留待反馈
