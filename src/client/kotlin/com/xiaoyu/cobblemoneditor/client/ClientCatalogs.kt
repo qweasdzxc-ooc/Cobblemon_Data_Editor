@@ -14,6 +14,12 @@ import java.nio.file.Path
 /** 客户端从 Cobblemon 运行时读全精灵/全特性列表；中文名优先 lang，其次内置名表，最后从 .js shortDesc 兜底。 */
 object ClientCatalogs {
 
+    /** 从显示名生成稳定合法的英文 id（同名=>同 id，重复保存即覆盖旧条目而不是新建）。 */
+    fun autoId(name: String): String {
+        val seed = if (name.isBlank()) System.currentTimeMillis() else name.hashCode().toLong()
+        return "c" + ((seed and 0x7fffffff) % 1000000)
+    }
+
     /** 内置官方中文名表（打包自 Cobblemon zh_cn.json，lang 缺失时的兜底） */
     private val speciesNames: Map<String, String> by lazy { loadCatalog("species_names.json") }
     private val moveNames: Map<String, String> by lazy { loadCatalog("move_names.json") }

@@ -43,7 +43,7 @@ object EffectBricks {
             listOf("10" to "畏缩10%", "30" to "畏缩30%", "100" to "畏缩100%"),
             MoveBrickKind.SECONDARY, { p -> "{ chance: " + p[0] + ", volatileStatus: 'flinch' }" }),
         EffectBrick("foe_boost", "概率弱化对手", listOf("属性", "级数(正数)", "概率%"),
-            listOf("def:1:100" to "降防1级100%", "atk:1:100" to "降攻1级100%", "spa:1:100" to "降特攻1级100%"),
+            listOf("def:1:100" to "降防1级100%", "atk:1:100" to "降攻1级100%", "spa:1:100" to "降特攻1级100%", "spd:1:100" to "降特防1级100%", "spe:1:100" to "降速1级100%"),
             MoveBrickKind.SECONDARY, { p -> "{ chance: " + p[2] + ", boosts: { " + p[0] + ": -" + p[1] + " } }" }),
         EffectBrick("drain", "吸取回复", listOf("回复分母(2=50%)"),
             listOf("2" to "吸取50%", "3" to "吸取33%", "4" to "吸取25%"),

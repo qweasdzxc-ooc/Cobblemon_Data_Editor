@@ -27,7 +27,7 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     private lateinit var assignSlotDropdown: Dropdown
     private var currentBrick = "start_boost"
     private val effects = mutableListOf<Pair<String, String>>()
-    private val maxEffects = 6
+    private val maxEffects = 12
     private var assignSpecies = ""
     private var assignSlot = ""
     private var lastAssignSearch = ""
@@ -41,6 +41,7 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         val bx = fieldX
 
         idBox = EditBox(this.font, bx, 36, 260, 16, Component.empty()); idBox.setMaxLength(32)
+        idBox.setHint(Component.literal("英文id(可留空自动生成)"))
         nameBox = EditBox(this.font, bx, 58, 260, 16, Component.empty()); nameBox.setMaxLength(64)
         descBox = EditBox(this.font, bx, 80, 260, 16, Component.empty()); descBox.setMaxLength(200)
         addRenderableWidget(idBox); addRenderableWidget(nameBox); addRenderableWidget(descBox)
@@ -92,8 +93,9 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         removeButtons.clear()
         val left = width / 2 - 160
         effects.forEachIndexed { i, _ ->
-            val y = 184 + i * 18
-            val btn = Button.builder(Component.literal("✕")) { removeEffect(i) }.bounds(left + 250, y, 18, 16).build()
+            val col = i / 6
+            val row = i % 6
+            val btn = Button.builder(Component.literal("✕")) { removeEffect(i) }.bounds(left + if (col == 0) 150 else 300, 184 + row * 18, 18, 16).build()
             addRenderableWidget(btn)
             removeButtons.add(btn)
         }
@@ -137,9 +139,13 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
 
     /** 把当前特性加入选中精灵的特性池（服务端合并语义）。 */
     private fun assignToSpecies() {
-        val abilityId = idBox.value.trim().lowercase()
-        if (abilityId.isEmpty()) { msg("请先填写特性 id（英文）"); return }
-        if (!abilityId.matches(Regex("[a-z0-9_]+"))) { msg("特性 id 只能用小写英文/数字/下划线"); return }
+        val rawId = idBox.value.trim().lowercase()
+        val abilityId = if (rawId.isEmpty() || !rawId.matches(Regex("[a-z0-9_]+"))) {
+            val gen = ClientCatalogs.autoId(nameBox.value.trim())
+            idBox.value = gen
+            msg("特性 id 已自动生成: $gen（id 只能用小写英文/数字/下划线，中文名请填在名称框）")
+            gen
+        } else rawId
         if (assignSpecies.isEmpty()) { msg("请选择要赋予的精灵"); return }
         val player = Minecraft.getInstance().player
         if (player == null) { msg("未连接服务器"); return }
@@ -148,8 +154,13 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     }
 
     private fun save() {
-        val id = idBox.value.trim().lowercase()
-        if (id.isEmpty()) { msg("请填写 id（英文）"); return }
+        var id = idBox.value.trim().lowercase()
+        if (id.isEmpty() || !id.matches(Regex("[a-z0-9_]+"))) {
+            val gen = ClientCatalogs.autoId(nameBox.value.trim())
+            id = gen
+            idBox.value = gen
+            msg("特性 id 已自动生成: $gen（id 只能用小写英文/数字/下划线，中文名请填在名称框）")
+        }
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=" + desc)
@@ -170,6 +181,12 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
     }
 
     private fun msg(s: String) { Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false) }
+
+    private fun clip(s: String, maxWidth: Int): String {
+        var t = s
+        while (t.length > 1 && this.font.width(t) > maxWidth) t = t.dropLast(1)
+        return t
+    }
 
     private fun encodeRaw(s: String): String = Base64.getUrlEncoder().withoutPadding().encodeToString(s.toByteArray(Charsets.UTF_8))
 
@@ -198,12 +215,19 @@ class AbilityEditorScreen : Screen(Component.literal("特性编辑器")) {
         g.drawString(this.font, "描述:", left, 84, 0xAAAAAA)
         g.drawString(this.font, "效果:", left, 122, 0xAAAAAA)
         g.drawString(this.font, "参数:", left, 144, 0xAAAAAA)
-        g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 168, 0xAAAAAA)
+        val hintBrick = AbilityEffects.byId(currentBrick)
+        val hintText = "参数说明: " + (hintBrick?.paramHints?.takeIf { it.isNotEmpty() }?.joinToString("/") ?: "该效果无参数")
+        g.drawString(this.font, hintText, left + 4, 158, 0x888888)
+        g.drawString(this.font, "已添加(最多" + maxEffects + "条):", left, 170, 0xAAAAAA)
         g.drawString(this.font, "赋予:", left, 310, 0xAAAAAA)
         effects.forEachIndexed { i, (b, params) ->
             val brick = AbilityEffects.byId(b)
-            val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")
-            g.drawString(this.font, label, left + 4, 186 + i * 18, 0xFFFFFF)
+            val presetName = if (params.isNotEmpty()) brick?.presets?.firstOrNull { it.first == params }?.second else null
+            val tail = presetName?.let { "（" + it + "）" } ?: if (params.isEmpty()) "" else " (" + params + ")"
+            val label = clip((i + 1).toString() + ". " + (brick?.displayName ?: b) + tail, 144)
+            val col = i / 6
+            val row = i % 6
+            g.drawString(this.font, label, left + 4 + col * 150, 186 + row * 18, 0xFFFFFF)
         }
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }

@@ -64,18 +64,20 @@ class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器
     private fun rebuildRemoveButtons() {
         for (b in removeButtons) removeWidget(b)
         removeButtons.clear()
-        var y = 122
-        for ((brick, _) in added) {
-            val idx = added.indexOfFirst { it.first.id == brick.id }
+        added.forEachIndexed { i, (brick, _) ->
+            val col = i / 4
+            val row = i % 4
+            val x = left + if (col == 0) 130 else 250
+            val w = if (col == 0) 18 else 20
             val btn = Button.builder(Component.literal("✕")) {
+                val idx = added.indexOfFirst { it.first.id == brick.id }
                 if (idx in added.indices) {
                     added.removeAt(idx)
                     rebuildRemoveButtons()
                 }
-            }.bounds(left + 250, y - 4, 20, 12).build()
+            }.bounds(x, 118 + row * 16, w, 12).build()
             removeButtons.add(btn)
             addRenderableWidget(btn)
-            y += 16
         }
     }
 
@@ -130,8 +132,8 @@ class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器
             status = "参数无效（需要 ${brick.paramHints.joinToString("/")}）"
             return
         }
-        if (added.size >= 6) {
-            status = "最多 6 个效果"
+        if (added.size >= 8) {
+            status = "最多 8 个效果"
             return
         }
         if (added.none { it.first.id == brick.id }) {
@@ -177,6 +179,12 @@ class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器
         player.connection.sendCommand(cmd)
     }
 
+    private fun clip(s: String, maxWidth: Int): String {
+        var t = s
+        while (t.length > 1 && this.font.width(t) > maxWidth) t = t.dropLast(1)
+        return t
+    }
+
     override fun render(g: GuiGraphics, mx: Int, my: Int, delta: Float) {
         super.render(g, mx, my, delta)
         g.drawString(this.font, "效果id:", left, 22, 0xAAAAAA)
@@ -185,14 +193,14 @@ class HeldItemEditorScreen : Screen(Component.literal("携带道具 · 编辑器
         g.drawString(this.font, "积木:", left, 66, 0xAAAAAA)
         g.drawString(this.font, "预设:", left + 190, 66, 0xAAAAAA)
         g.drawString(this.font, "参数:", left, 88, 0xAAAAAA)
-        g.drawString(this.font, "已添加(最多6条):", left, 108, 0xAAAAAA)
+        g.drawString(this.font, "已添加(最多8条):", left, 108, 0xAAAAAA)
         g.drawString(this.font, "载体物品:", left, 200, 0xAAAAAA)
         g.drawString(this.font, "保存效果后点“给我一个”获得带组件的物品，放进精灵携带槽生效", left, 220, 0x888888)
-        var y = 122
-        for ((brick, params) in added) {
-            val text = brick.displayName + if (params.isEmpty()) "" else "（" + params.joinToString(":") + "）"
-            g.drawString(this.font, text, left + 4, y, 0xCCCCCC)
-            y += 16
+        added.forEachIndexed { i, (brick, params) ->
+            val col = i / 4
+            val row = i % 4
+            val text = clip(brick.displayName + if (params.isEmpty()) "" else "（" + params.joinToString(":") + "）", if (col == 0) 124 else 92)
+            g.drawString(this.font, text, left + 4 + col * 150, 122 + row * 16, 0xCCCCCC)
         }
         g.drawString(this.font, status, left, height - 52, 0xFFFF55)
         for (d in dropdowns) d.renderExpanded(g, mx, my)

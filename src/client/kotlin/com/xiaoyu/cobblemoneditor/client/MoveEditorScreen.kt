@@ -43,7 +43,7 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     private var flag = "none"
     private var currentBrick = "secondary_status"
     private val bricks = mutableListOf<Pair<String, String>>()
-    private val maxBricks = 6
+    private val maxBricks = 12
     private var assignSpecies = ""
     private var assignMethod = "level"
     private var lastAssignSearch = ""
@@ -58,6 +58,7 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
 
         // 第 1 行：id + 名称
         idBox = EditBox(this.font, bx, 18, 100, 16, Component.empty()); idBox.setMaxLength(32)
+        idBox.setHint(Component.literal("英文id(可留空)"))
         nameBox = EditBox(this.font, bx + 128, 18, 110, 16, Component.empty()); nameBox.setMaxLength(64)
         nameBox.setHint(Component.literal("招式中文名"))
         addRenderableWidget(idBox); addRenderableWidget(nameBox)
@@ -134,8 +135,9 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         removeButtons.clear()
         val left = width / 2 - 170
         bricks.forEachIndexed { i, _ ->
-            val y = 198 + i * 18
-            val btn = Button.builder(Component.literal("✕")) { removeBrick(i) }.bounds(left + 250, y, 18, 16).build()
+            val col = i / 6
+            val row = i % 6
+            val btn = Button.builder(Component.literal("✕")) { removeBrick(i) }.bounds(left + if (col == 0) 150 else 300, 198 + row * 18, 18, 16).build()
             addRenderableWidget(btn)
             removeButtons.add(btn)
         }
@@ -179,9 +181,13 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
 
     /** 把当前招式加入选中精灵的学习表（服务端合并语义，无需重填全部招式）。 */
     private fun assignToSpecies() {
-        val moveId = idBox.value.trim().lowercase()
-        if (moveId.isEmpty()) { msg("请先填写招式 id（英文）"); return }
-        if (!moveId.matches(Regex("[a-z0-9_]+"))) { msg("招式 id 只能用小写英文/数字/下划线"); return }
+        val rawId = idBox.value.trim().lowercase()
+        val moveId = if (rawId.isEmpty() || !rawId.matches(Regex("[a-z0-9_]+"))) {
+            val gen = ClientCatalogs.autoId(nameBox.value.trim())
+            idBox.value = gen
+            msg("招式 id 已自动生成: $gen（id 只能用小写英文/数字/下划线，中文名请填在名称框）")
+            gen
+        } else rawId
         if (assignSpecies.isEmpty()) { msg("请选择要赋予的精灵"); return }
         val entry = if (assignMethod == "level") {
             val lvl = assignLevelBox.value.trim().toIntOrNull()
@@ -195,8 +201,13 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     }
 
     private fun save() {
-        val id = idBox.value.trim().lowercase()
-        if (id.isEmpty()) { msg("请填写招式 id（英文）"); return }
+        var id = idBox.value.trim().lowercase()
+        if (id.isEmpty() || !id.matches(Regex("[a-z0-9_]+"))) {
+            val gen = ClientCatalogs.autoId(nameBox.value.trim())
+            id = gen
+            idBox.value = gen
+            msg("招式 id 已自动生成: $gen（id 只能用小写英文/数字/下划线，中文名请填在名称框）")
+        }
         val parts = ArrayList<String>()
         val name = nameBox.value.trim(); if (name.isNotEmpty()) parts.add("name=" + name)
         val desc = descBox.value.trim(); if (desc.isNotEmpty()) parts.add("desc=" + desc)
@@ -225,6 +236,12 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
     }
 
     private fun msg(s: String) { Minecraft.getInstance().player?.displayClientMessage(Component.literal(s), false) }
+
+    private fun clip(s: String, maxWidth: Int): String {
+        var t = s
+        while (t.length > 1 && this.font.width(t) > maxWidth) t = t.dropLast(1)
+        return t
+    }
 
     private fun encodeRaw(s: String): String = Base64.getUrlEncoder().withoutPadding().encodeToString(s.toByteArray(Charsets.UTF_8))
 
@@ -261,12 +278,18 @@ class MoveEditorScreen : Screen(Component.literal("招式编辑器")) {
         g.drawString(this.font, "pp:", left + 202, 132, 0xAAAAAA)
         g.drawString(this.font, "积木:", left, 154, 0xAAAAAA)
         g.drawString(this.font, "参数:", left, 176, 0xAAAAAA)
-        g.drawString(this.font, "已添加:", left, 202, 0xAAAAAA)
+        val hintBrick = EffectBricks.byId(currentBrick)
+        val hintText = "参数说明: " + (hintBrick?.paramHints?.takeIf { it.isNotEmpty() }?.joinToString("/") ?: "该效果无参数")
+        g.drawString(this.font, hintText, left + 4, 188, 0x888888)
         g.drawString(this.font, "赋予:", left, 310, 0xAAAAAA)
         bricks.forEachIndexed { i, (b, params) ->
             val brick = EffectBricks.byId(b)
-            val label = (i + 1).toString() + ". " + (brick?.displayName ?: b) + (if (params.isEmpty()) "" else " (" + params + ")")
-            g.drawString(this.font, label, left + 4, 200 + i * 18, 0xFFFFFF)
+            val presetName = if (params.isNotEmpty()) brick?.presets?.firstOrNull { it.first == params }?.second else null
+            val tail = presetName?.let { "（" + it + "）" } ?: if (params.isEmpty()) "" else " (" + params + ")"
+            val label = clip((i + 1).toString() + ". " + (brick?.displayName ?: b) + tail, 144)
+            val col = i / 6
+            val row = i % 6
+            g.drawString(this.font, label, left + 4 + col * 150, 200 + row * 18, 0xFFFFFF)
         }
         for (d in dropdowns) d.renderExpanded(g, mx, my)
     }

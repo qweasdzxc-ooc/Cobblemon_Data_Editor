@@ -145,6 +145,11 @@ object LangPackWriter {
                     }
                 }
             }
+            // 世界资源包必须带 pack.mcmeta，否则进入世界时提示"无法应用服务器资源包"
+            if (!entries.containsKey("pack.mcmeta")) {
+                entries["pack.mcmeta"] =
+                    "{\"pack\":{\"pack_format\":34,\"description\":\"Cobblemon Data Editor \u4e2d\u6587\u663e\u793a\"}}".toByteArray(Charsets.UTF_8)
+            }
             for ((entryName, updates) in langUpdates) {
                 if (updates.isEmpty()) continue
                 val old = entries[entryName]

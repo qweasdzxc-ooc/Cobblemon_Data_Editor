@@ -95,3 +95,17 @@
 - 明确不学：终端物品+物品组（违反无物品约束）、全反射桥接（我们有编译依赖直接调用）、他们的 JS 生成器（方向不同）、聊天命令回显（保持我们的屏幕内交互）
 - 构建：034a 失败（LiveApply KDoc 含 moves/*.js 嵌套块注释）→ 034b ✅ BUILD SUCCESSFUL 58s（含 test 任务全绿）
 - 部署：mods 装入 [自制]CobblemonDataEditor-0.3.4.jar（300510B，fabric.mod.json=0.3.4，含 LiveApply/catalog 资源），0.3.3 归档备份目录
+
+---
+
+## 2026-10-18 17:5x v0.3.5 五问题修复轮
+
+用户实测反馈 5 个问题，逐项处理：
+
+1. **世界资源包警告**（无法应用服务器资源包）——resources.zip 缺 pack.mcmeta，LangPackWriter 写入时自动补齐（pack_format 34）。
+2. **特性 id 中文报错**——客户端保存/赋予前自动生成合法 ASCII id（"c"+名称 hash 6 位），中文名填名称框即可；服务端保持严格校验。
+3. **效果数量上限**——招式积木 6→12、特性积木 6→12、道具积木 6→8，已添加列表改双列渲染。
+4. **anystag 日志**——[扩展-任意标签]anytag-1.0.1.jar 自带数据包加载的 info 日志，整合包原生行为，无害无需修。
+5. **参数显示不全**——三编辑器增加"参数说明"行（paramHints），已添加条目把参数解析成预设中文名显示。
+
+构建 BUILD SUCCESSFUL、部署 [自制]CobblemonDataEditor-0.3.5.jar（304457B）、README 同步更新并推送。
