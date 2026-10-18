@@ -3,7 +3,7 @@
 	"id": "cobblemoneditor",
 	"version": "${version}",
 	"name": "Cobblemon Data Editor",
-	"description": "In-game GUI editor for Cobblemon species stats, abilities and moves.",
+	"description": "游戏内 Cobblemon 数据编辑器：精灵种族值/属性/特性/学习表、招式、特性、携带道具效果。In-game GUI editor for Cobblemon species, moves, abilities and held items.",
 	"authors": ["xiaoyu"],
 	"license": "MIT",
 	"environment": "*",

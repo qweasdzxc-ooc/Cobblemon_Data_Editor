@@ -83,3 +83,15 @@
 - 构建：remapJar OOM（-Xmx2G 不够）→ gradle.properties 提到 -Xmx4G + 重启 daemon 后 BUILD SUCCESSFUL；误提交的 752MB hprof 已从仓库移除并 ignore *.hprof
 - 部署：mods 装入 [自制]CobblemonDataEditor-0.3.3.jar（222115B，71 entries，fabric.mod.json=0.3.3），0.3.2 归档备份目录；commit d86d4a0 + 1459cb4
 - 待办：用户复测六项反馈；item 2/4 的 UI 联调问题留待反馈
+
+## 2026-10-18 Phase 9 工坊设计整合（v0.3.4）
+- 用户请求：学习 E:\PCL\自制修改mod\cobblemon_1_cobblem\源码\mod（精灵工坊）的优秀设计整合进本项目；不加任何模组物品；实现方式与我们有区别的，一律按我们的来
+- 子代理深度分析 14 个 Java 文件全部源码，10 节报告；定稿整合清单并逐项落地：
+- 9.1 实时生效管线：新增 server/LiveApply.kt —— 保存后重扫数据包→cobblemoneditor 包移到启用列表末尾→reloadResources→Cobblemon reload 监听器重读 moves/abilities 的 .js→直接注入内存（种族值 baseStats.put / 特性池 CommonAbility+LOWEST / 学习表 TM 注入）+ PokemonSpecies.sync 同步在线玩家。新精灵与中文名仍需重进世界（PokemonSpecies 不热重载、世界资源包进世界时加载）
+- 9.5 原子写入：DatapackWriter.writeWithBackup 改临时文件+ATOMIC_MOVE（回退普通 move）
+- 9.6 单元测试：新增 src/test/kotlin/.../SpecParsingTest.kt 12 个 JUnit5 测试（SpeciesFactory/SpeciesPatch/MoveSpec/AbilitySpec/HeldItemSpec 纯逻辑，全部通过）；build.gradle 加 junit-jupiter
+- 9.3 中文名目录：从 Cobblemon zh_cn.json 提取内置名表（species 1025/moves 1875/abilities 628）打包进 jar（resources/cobblemoneditor/catalog/），ClientCatalogs 兜底显示中文名（保留 resources.zip 增量机制为主）
+- 9.2 构建稳健性：processResources 加 filteringCharset='UTF-8'、fabric.mod.json 改行过滤替换 version（避免 expand 破坏 JSON 转义）、JavaCompile encoding=UTF-8
+- 明确不学：终端物品+物品组（违反无物品约束）、全反射桥接（我们有编译依赖直接调用）、他们的 JS 生成器（方向不同）、聊天命令回显（保持我们的屏幕内交互）
+- 构建：034a 失败（LiveApply KDoc 含 moves/*.js 嵌套块注释）→ 034b ✅ BUILD SUCCESSFUL 58s（含 test 任务全绿）
+- 部署：mods 装入 [自制]CobblemonDataEditor-0.3.4.jar（300510B，fabric.mod.json=0.3.4，含 LiveApply/catalog 资源），0.3.3 归档备份目录

@@ -34,7 +34,14 @@ object DatapackWriter {
             if (Files.exists(file)) {
                 Files.copy(file, dir.resolve("$fileName.bak-${System.currentTimeMillis()}"), StandardCopyOption.REPLACE_EXISTING)
             }
-            Files.writeString(file, content)
+            // 原子写入：先写临时文件再改名，避免写入中断留下半截 JSON/JS
+            val tmp = dir.resolve("$fileName.tmp")
+            Files.writeString(tmp, content)
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            } catch (_: Exception) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING)
+            }
             pruneBackups(dir, fileName)
             Result.Written(file)
         } catch (e: Exception) {

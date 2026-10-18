@@ -144,7 +144,13 @@ object EditorCommands {
         val json = SpeciesPatch.buildJson(species, parsed)
         return when (val r = DatapackWriter.writeSpeciesAddition(packRoot(source), PACK_ID, species, json)) {
             is DatapackWriter.Result.Written -> {
-                source.sendSuccess({ Component.literal("已保存 $species 补丁，重进世界后生效。 文件: ${r.path}") }, false)
+                LiveApply.request(source.server, listOf(LiveApply.SpeciesPatchData(
+                    speciesName = species,
+                    stats = parsed.stats,
+                    abilities = parsed.replaceAbilities ?: emptyList(),
+                    moves = parsed.replaceMoves ?: emptyList(),
+                )))
+                source.sendSuccess({ Component.literal("已保存 $species 补丁并即时应用（种族值/特性/学习表）。新精灵与中文名重进世界后生效。 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -194,7 +200,8 @@ object EditorCommands {
                     note += "（显示名已写入世界资源包）"
                 }
                 if (ConflictChecker.moveNameTaken(move.id)) note += " ⚠ 已有同名招式，重进世界后本次保存将覆盖其数据"
-                source.sendSuccess({ Component.literal("已保存招式 ${move.id}，重进世界后生效。$note 文件: ${r.path}") }, false)
+                LiveApply.request(source.server, emptyList())
+                source.sendSuccess({ Component.literal("已保存招式 ${move.id}，效果即时生效。$note 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -219,7 +226,8 @@ object EditorCommands {
                     note += "（显示名已写入世界资源包）"
                 }
                 if (ConflictChecker.abilityNameTaken(ability.id)) note += " ⚠ 已有同名特性，重进世界后本次保存将覆盖其数据"
-                source.sendSuccess({ Component.literal("已保存特性 ${ability.id}，重进世界后生效。$note 文件: ${r.path}") }, false)
+                LiveApply.request(source.server, emptyList())
+                source.sendSuccess({ Component.literal("已保存特性 ${ability.id}，效果即时生效。$note 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {
@@ -238,7 +246,8 @@ object EditorCommands {
         val js = HeldItemSpecFactory.renderJs(item)
         return when (val r = DatapackWriter.writeHeldItem(packRoot(source), PACK_ID, item.id, js)) {
             is DatapackWriter.Result.Written -> {
-                source.sendSuccess({ Component.literal("已保存道具效果 ${item.id}，重进世界后生效。用 /cobbleeditor item give ${item.id} <物品id> 把效果绑定到物品。 文件: ${r.path}") }, false)
+                LiveApply.request(source.server, emptyList())
+                source.sendSuccess({ Component.literal("已保存道具效果 ${item.id}，效果即时生效。用 /cobbleeditor item give ${item.id} <物品id> 把效果绑定到物品。 文件: ${r.path}") }, false)
                 1
             }
             is DatapackWriter.Result.Failed -> {

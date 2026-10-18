@@ -49,6 +49,19 @@
 - [ ] 7.1 用户提供问题清单
 - [ ] 7.2 逐项修复 + 回归
 
+## Phase 9：学习精灵工坊（Cobblemon Workshop）源码，整合优秀设计（v0.3.4）
+> 用户：E:\PCL\自制修改mod\cobblemon_1_cobblem\源码\mod「看看有没有你能学习到的，把优秀的设计整合到我们的工程里面去，但是不要添加任何模组物品」。
+> 约束：不加物品（保留 K 键）；保留现有命令/GUI 入口；每点构建验证。
+
+候选整合点（第一手通读 + 子代理报告筛选后定稿）：
+- [ ] 9.1 **实时生效管线**（WorkshopRuntime.java）：写包→`server.getDataPackManager().scanPacks()`→调整启用顺序（自制包最后加载）→`server.reloadResources(enabled)` 异步重载→完成后把定义应用到 Cobblemon 内存注册表（Abilities.register 公开 / 招式经 Showdown 桥 receiveMoveData 重放——待子代理确认其 CobblemonBridge.applyWorkshopDefinitions 的确切机制）→不再要求"重进世界"。要点：Session 每世界独立、pending 队列合并、快照语义（一次重载只应用开始时的数据）、writeChanged 只写变化文件、clearObsoleteFiles 清理已删除条目、whenComplete 回调回服务器线程。
+- [ ] 9.2 **构建稳健性**（其 build.gradle）：processResources 加 `filteringCharset='UTF-8'`，fabric.mod.json 用逐行 filter 替换 `${version}`（expand 会把 JSON 里的 \n 转义展开成真实换行导致 jar 内 JSON 损坏）。
+- [ ] 9.3 **中文名目录内置**（SpeciesCatalog.java + species_names.json）：mod 资源内嵌官方简中名表（可从 Cobblemon jar 的 zh_cn.json 生成 cobblemon.species.<id>.name 键表），搜索同时匹配 id 子串与中文名子串，显示"中文名（id）"；id 归一化（去命名空间+小写）。可复用给招式/特性目录（同样从 lang 生成）。
+- [ ] 9.4 **保存回执状态机**（WorkshopState.java）：客户端 editPending 防重复提交 + EDIT_WAIT/EDIT_OK/EDIT_ERROR 提示流；服务端按玩家发 Ack。我们目前保存后无回执（仅聊天栏命令回显）。
+- [ ] 9.5 **原子写入 + 只写变化文件**（WorkshopData.writeAtomic/WorkshopRuntime.writeChanged）：防半写损坏，减少无谓磁盘写入。
+- [ ] 9.6 测试骨架（WorkshopRegressionTest.java + JUnit 5 接入）：给 parse/render 纯逻辑补回归测试（我们工程尚无 src/test）。
+- [ ] 9.7 其他子代理报告里的高性价比项（待报告）
+
 ## Errors Encountered
 
 | Error | Attempt | Resolution |

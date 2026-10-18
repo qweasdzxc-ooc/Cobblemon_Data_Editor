@@ -32,17 +32,32 @@ dependencies {
 	modCompileOnly "com.cobblemon:fabric:${project.cobblemon_version}"
 	// Dev runtime so the dev client actually launches with Cobblemon
 	modLocalRuntime "com.cobblemon:fabric:${project.cobblemon_version}"
+
+	// 纯逻辑层单元测试（不启动 Minecraft，只测 parse/render 等数据层函数）
+	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.test {
+	useJUnitPlatform()
 }
 
 processResources {
 	inputs.property "version", project.mod_version
+	// filter 同样按 filteringCharset 读写，不显式设成 UTF-8 时取平台默认
+	// （容器里常是 ASCII），会把 description 里的中文破坏成非法 UTF-8：
+	// Gradle 仍报 BUILD SUCCESSFUL，但最终 JAR 里的 JSON 已经坏了。
+	filteringCharset = 'UTF-8'
+	// 只替换版本占位符。Gradle expand 会把 JSON 字符串里的 \n 转义解释成真实换行，
+	// 造成源文件合法、最终 JAR 中 fabric.mod.json 却损坏。
 	filesMatching("fabric.mod.json") {
-		expand "version": project.mod_version
+		filter { line -> line.replace('${version}', project.mod_version.toString()) }
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
+	it.options.encoding = 'UTF-8'
 }
 
 kotlin {
