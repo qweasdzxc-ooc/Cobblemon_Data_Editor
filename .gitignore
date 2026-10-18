@@ -31,3 +31,6 @@ research/cobblemon-classes/
 # Source dump of this mod (research only)
 CobblemonDataEditor-src.zip
 
+
+# JVM crash dumps
+*.hprof
