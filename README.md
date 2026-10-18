@@ -1,0 +1,82 @@
+# Cobblemon Data Editor · 宝可梦数据编辑器
+
+一个针对整合包 **Lets go cobblemon master** 自制的游戏内数据编辑器 mod：在游戏里用可视化界面编辑宝可梦的种族值、属性、特性、学习表，创建全新精灵、招式、特性与携带道具效果，保存后自动写入数据包。
+
+- Minecraft / Fabric：**1.21.1**
+- 语言：**Kotlin 2.2.20**
+- 依赖：**Cobblemon 1.8.1**（硬依赖，必须同装）
+
+---
+
+## ✨ 功能一览（v0.3.4）
+
+| 模块 | 说明 |
+|---|---|
+| 精灵编辑 | 种族值、属性、特性（合并/整体替换）、学习表（显示当前+编辑），选择精灵自动预填现有数据 |
+| 新建精灵 | 图鉴号 / 属性 / 六维 / 特性 / 学习表 / 中文名，自动写入 `cobblemoneditor` 命名空间 |
+| 招式编辑器 | 35 个效果积木（状态/天气/场地/陷阱/多段/自爆/必会心/自定义 JS…）+ 描述 + 一键赋予精灵学习 |
+| 特性编辑器 | 40 个效果积木（能力修正/免疫/减伤/天气增益/自定义 JS…）+ 赋予精灵 |
+| 携带道具编辑器 | 效果积木 + 绑定到任意物品，`给我一个` 直接拿 |
+| 中文名/描述 | 保存时自动写入世界资源包 `resources.zip`（lang 键与 Cobblemon 官方一致） |
+| 即时生效 | 招式/特性/种族值/学习表保存后**立即应用**，无需重进世界（LiveApply 管线） |
+| 工程能力 | 冲突检测提示、备份保留 10 份、原子写入、12 个 JUnit 单元测试、内置中文名目录（1025 精灵 / 1875 招式 / 628 特性） |
+
+## 📦 安装
+
+把构建产物 `cobblemoneditor-<版本>.jar` 放进整合包的 `mods` 目录即可（需与 Cobblemon 1.8.1 同时加载）。
+
+## 🎮 使用
+
+1. 进入世界（单机请开启作弊以获得命令权限，编辑器需要 OP 权限）
+2. 按 **K** 打开编辑器主菜单
+3. 或直接使用命令：
+
+```
+/cobbleeditor set <精灵id> <spec>            修改现有精灵
+/cobbleeditor species add <id> <spec>        新建精灵
+/cobbleeditor move add <id> <spec>           新建招式
+/cobbleeditor ability add <id> <spec>        新建特性
+/cobbleeditor item add <id> <spec>           新建携带道具效果
+/cobbleeditor item give <效果id> <物品id>     获得绑定该效果的物品
+```
+
+**数据保存位置**（世界级数据包）：
+
+```
+saves/<世界名>/datapacks/cobblemoneditor/   ← 招式/特性/道具效果/精灵/补丁
+saves/<世界名>/resources.zip                ← 中文名与描述（世界资源包）
+```
+
+**生效时机**：招式/特性/种族值/学习表即时生效；新精灵与中文名需要重进世界（Cobblemon 物种注册表不支持热重载）。
+
+## 🔨 构建
+
+```powershell
+# 必须使用 Zulu JDK 25（JDK 21 会报 "requires at least JVM runtime version 25"）
+$env:JAVA_HOME = "C:\Program Files\Zulu\zulu-25"
+.\gradlew.bat build          # 产物：build/libs/cobblemoneditor-<版本>.jar
+.\gradlew.bat test           # 运行 JUnit 单元测试
+```
+
+## 📜 版本历史
+
+| 版本 | 内容 |
+|---|---|
+| v0.3.4 | 工坊设计整合：实时生效管线、原子写入、内置中文名目录、JUnit 测试、构建稳健性 |
+| v0.3.3 | 六项反馈：特性搜索重置、招式编辑器重排+描述+赋予精灵、精灵编辑器预填、携带道具编辑器、积木大扩展、自定义 JS |
+| v0.3.2 | 中文名/描述写入世界资源包、界面遮挡修复、状态招式 basePower 修复、积木参数校验 |
+| v0.3.1 | 特性合并语义、切换精灵时编辑状态泄漏修复 |
+| v0.3.0 | 新建精灵、学习表编辑、冲突检测、备份保留 10 份、积木库 23+32 |
+| v0.2.x | 基础骨架：精灵种族值/属性/特性编辑 |
+
+## 📁 项目结构
+
+```
+src/main/kotlin/com/xiaoyu/cobblemoneditor/
+├── data/       数据层：Spec 解析/JSON 构建、积木库、名表、合并器
+├── server/     服务端：命令、数据包写入、LiveApply 即时应用、lang 资源包
+└── client/     客户端：编辑器界面（精灵/新建精灵/招式/特性/道具）、目录
+src/test/       JUnit 纯逻辑单元测试
+docs/           设计文档（specs/plans）
+research/       Cobblemon API 调研资料
+```
