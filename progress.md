@@ -67,3 +67,7 @@
 - EditorCommands 三命令保存成功后自动写入 lang（消息附"（显示名已写入世界资源包）"）；CobblemonEditor 注册 SERVER_STARTED → LangPackWriter.syncAll 全量扫描数据包重建 lang（旧版 0.2.x 数据无需重编辑即显示中文）
 - SpeciesFactory 新增 namezh= 键（中文显示名，≤32 字符，禁 , " \ |）；NewSpeciesScreen 新增中文名输入框（可选）
 - 待办：构建部署 0.3.2、向用户汇报并请求复测
+
+## 2026-10-18 12:43 v0.3.2 部署完成
+- 用户关闭游戏后：mods 装入 [自制]CobblemonDataEditor-0.3.2.jar（183886B）
+- 0.3.1 归档至 _mods_backup_20261007_234644
